@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#061a33">
+<title>BP FUEL</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#fff,#121418);--card:light-dark(#f3f4f6,#1c1f25);--ink:light-dark(#17191d,#eceef1);--mute:light-dark(#5b6068,#a3a9b2);--line:light-dark(#dcdfe4,#2e323a);--navy:#061a33;--lime:#b8f000;--cyan:#1ec8e8;--blue:light-dark(#1550e6,#4d8dff);--eta:light-dark(#3a8f00,#9be22d);--gas:light-dark(#b85f00,#f2a23a);--ev:light-dark(#1550e6,#4d8dff)}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip}
+.band{padding:18px max(4vw,16px)}
+.wrap{max-width:1000px;margin:0 auto}
+h1,h2,.big{font-family:"Barlow Condensed",Barlow,sans-serif;line-height:1.05;margin:0;text-wrap:balance}
+header{background:var(--navy);color:#fff;position:relative}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:linear-gradient(90deg,#b8f000,#1ec8e8,#1550e6)}
+.top{display:flex;align-items:center;gap:16px}
+.top img{height:96px;width:auto;flex:none}
+.top p{margin:0;font:600 18px Barlow;color:#cfe9f5;max-width:24ch}
+.brand{font:700 26px "Barlow Condensed"}
+.brand small{font:600 14px Barlow;opacity:.85;margin-left:8px}
+.trip{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;margin-top:12px;align-items:end}
+.trip label{display:grid;gap:4px;font-weight:600;font-size:14px}
+.inrow{display:flex;gap:6px}
+input,select{font:16px Barlow;min-height:44px;padding:8px 10px;border-radius:8px;border:2px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+header input{border-color:transparent}
+button{font:600 16px Barlow;min-height:44px;border-radius:8px;cursor:pointer}
+.go{padding:0 20px;border:0;background:var(--lime);color:var(--navy);font:700 18px "Barlow Condensed";white-space:nowrap}
+.go:disabled{opacity:.6;cursor:wait}
+.gps{flex:none;padding:0 12px;border:0;background:rgba(30,200,232,.22);color:#fff;font-size:14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+#status{margin-top:10px;font-size:15px;min-height:1.5em}
+#map{height:min(58vh,520px);background:var(--card)}
+.routes{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button,.routes button{padding:0 14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:22px}
+.chips button[aria-pressed=true],.routes button[aria-pressed=true]{background:var(--navy);color:var(--lime);border-color:var(--navy)}
+.lbl{font-weight:700;font-size:15px;margin:16px 0 8px}
+.verdict{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 24px;align-items:end;margin-top:18px}
+.big{font-size:clamp(38px,9vw,52px)}
+.big.e{color:var(--eta)}.big.g{color:var(--gas)}.big.ev{color:var(--ev)}
+.why{color:var(--mute);margin:6px 0 0;max-width:62ch}
+.total{text-align:right}.total b{display:block;font:700 clamp(30px,7vw,44px) "Barlow Condensed";white-space:nowrap}
+.total span{color:var(--mute);font-size:14px}
+.warn{background:light-dark(#eaf4ff,#0d2347);border-left:4px solid var(--blue);padding:10px 14px;border-radius:6px;margin-top:12px}
+h2{font-size:30px;margin:6px 0 12px}
+.stops{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.stop{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:4px 14px;align-items:center;background:var(--card);border-radius:12px;padding:14px}
+.km{font:700 22px "Barlow Condensed";text-align:center;border:2px solid var(--blue);color:var(--blue);border-radius:8px;padding:4px 0;white-space:nowrap}
+.km small{display:block;font:600 13px Barlow;color:var(--mute)}
+.stop h3{margin:0;font-size:18px}
+.stop p{margin:2px 0 0;color:var(--mute);font-size:15px}
+.buy{text-align:right;white-space:nowrap}
+.buy b{display:block;font:700 26px "Barlow Condensed"}
+.buy b.e{color:var(--eta)}.buy b.g{color:var(--gas)}.buy b.ev{color:var(--ev)}
+.buy span{font-size:15px;color:var(--mute)}
+.link{background:none;border:0;color:var(--blue);padding:0;min-height:32px;font-weight:700;text-decoration:underline}
+.edit{background:var(--card);border-radius:12px;padding:14px;margin-top:12px;display:grid;gap:10px}
+.edit .row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}
+.save{padding:0 18px;border:0;background:var(--navy);color:var(--lime)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label.f{display:grid;gap:6px;font-weight:600;font-size:15px}
+.note{color:var(--mute);font-size:14px;margin-top:10px}
+.alt{background:var(--card)}
+.pin{color:#fff;font:700 13px Barlow;border-radius:6px;padding:3px 7px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-130%);display:inline-block}
+.pin.e{background:#3a8f00}.pin.g{background:#b85f00}.pin.ev{background:#1550e6}
+.leaflet-div-icon{background:none;border:0}
+footer{color:var(--mute);font-size:14px}
+@media(max-width:600px){.top img{height:76px}.top p{font-size:16px}.trip{grid-template-columns:1fr}.verdict{grid-template-columns:1fr}.total{text-align:left}.stop{grid-template-columns:58px minmax(0,1fr)}.buy{grid-column:2;text-align:left}.buy b{display:inline;margin-right:8px}.edit .row{grid-template-columns:1fr 1fr}.edit .row .save{grid-column:1/-1}}
+</style></head><body>
+<header class="band"><div class="wrap">
+<div class="top"><img src="logo.png" alt="BP FUEL" width="80" height="96"><p>Combustível certo, no posto certo, na hora certa.</p></div>
+<form class="trip" id="trip">
+<label>Saindo de<span class="inrow"><input id="orig" autocomplete="off" placeholder="Cidade, UF" value="Catolé do Rocha, PB"><button class="gps" id="gps" type="button">Estou aqui</button></span></label>
+<label>Indo para<input id="dest" autocomplete="off" placeholder="Cidade, UF" value="João Pessoa, PB"></label>
+<button class="go" id="go" type="submit">Traçar rota</button>
+</form>
+<div id="status">Digite a saída e o destino e toque em Traçar rota.</div>
+</div></header>
+
+<div id="map" role="region" aria-label="Mapa da rota"></div>
+
+<main>
+<section class="band"><div class="wrap">
+<div class="routes" id="routes"></div>
+<p class="lbl" id="lvlLbl">Quanto tem no tanque agora?</p>
+<div class="chips" id="levels"></div>
+<div class="verdict">
+<div><div class="big" id="vTitle">Trace uma rota</div><p class="why" id="vWhy">O BP FUEL mostra qual combustível compensa, onde parar e quanto colocar.</p></div>
+<div class="total"><span id="vTotLbl">Você paga nos postos</span><b id="vTotal">—</b><span id="vSave"></span></div>
+</div>
+<div id="vWarn"></div>
+<div id="edit"></div>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap">
+<h2 id="stopsTitle">Onde parar e quanto colocar</h2>
+<ol class="stops" id="stops"></ol>
+</div></section>
+
+<section class="band alt"><div class="wrap">
+<h2>Seu carro</h2>
+<div class="grid">
+<label class="f">Tipo de motor<select id="type"><option value="flex">Flex</option><option value="g">Só gasolina</option><option value="ev">Elétrico</option></select></label>
+<label class="f">O que tem no tanque<select id="cur"><option value="g">Gasolina</option><option value="e">Etanol</option></select></label>
+<label class="f">Consumo na estrada, gasolina (km/l)<input id="kg" type="number" step="0.1" inputmode="decimal"></label>
+<label class="f">Consumo na estrada, etanol (km/l)<input id="ke" type="number" step="0.1" inputmode="decimal"></label>
+<label class="f">Tamanho do tanque (litros)<input id="tank" type="number" step="1" inputmode="numeric"></label>
+<label class="f">Elétrico: autonomia com bateria cheia (km)<input id="evr" type="number" step="10" inputmode="numeric"></label>
+<label class="f">Folga de segurança<select id="res"><option value="40">40 km</option><option value="60">60 km</option><option value="80">80 km</option><option value="100">100 km</option></select></label>
+<label class="f">Quanto quer gastar<select id="budget"><option value="0">Sem limite</option><option value="100">Até R$ 100</option><option value="150">Até R$ 150</option><option value="200">Até R$ 200</option><option value="300">Até R$ 300</option><option value="500">Até R$ 500</option><option value="800">Até R$ 800</option></select></label>
+</div>
+<p class="note">Valores iniciais: Chevrolet S10 2.4 Flex 2014 manual, 9,5 km/l na gasolina e 7,3 km/l no etanol na estrada, tanque de 76 L.</p>
+<h2 style="margin-top:22px">Preço de referência</h2>
+<div class="grid">
+<label class="f">Gasolina (R$/l)<input id="refg" type="number" step="0.01" inputmode="decimal"></label>
+<label class="f">Etanol (R$/l)<input id="refe" type="number" step="0.01" inputmode="decimal"></label>
+</div>
+<p class="note">Usado nos postos sem preço informado. Toque num posto no mapa ou na lista para informar o preço da bomba: o plano refaz na hora e o preço fica salvo neste celular.</p>
+</div></section>
+</main>
+<footer class="band"><div class="wrap">Mapa e postos: © colaboradores do OpenStreetMap. Rotas: OSRM. Preços de referência: Procon-JP, Procon-CG e ANP (nov./2026). Distâncias e preços são estimativas: confira na bomba.</div></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>'R$ '+v.toFixed(2).replace('.',',');
+const num=v=>String(Math.max(0,Math.round(v)));
+const FN={e:'etanol',g:'gasolina'};
+// Preços de cidade conhecidos (média ou meio da faixa pesquisada)
+const SEEDS=[
+ {n:'João Pessoa',lat:-7.115,lon:-34.863,r:20,g:6.30,e:4.55,src:'Procon-JP, 17/11/2026'},
+ {n:'Campina Grande',lat:-7.230,lon:-35.881,r:15,g:6.37,e:4.68,src:'Procon-CG, 27/10/2026 (média)'},
+ {n:'Patos',lat:-7.024,lon:-37.280,r:12,g:6.69,e:5.06,src:'ANP, média da cidade'}];
+const LEVELS=[['Reserva',.08],['1/4',.25],['1/2',.5],['3/4',.75],['Cheio',1]];
+const DEF={level:.25,cur:'g',type:'flex',kg:9.5,ke:7.3,tank:76,evr:350,res:60,budget:0,refg:6.80,refe:5.05,prices:{}};
+let S=JSON.parse(JSON.stringify(DEF));
+try{Object.assign(S,JSON.parse(localStorage.getItem('bpfuel')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('bpfuel',JSON.stringify(S))}catch(e){}};
+
+const hav=(a,b,c,d)=>{const R=6371,t=Math.PI/180,x=Math.sin((c-a)*t/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin((d-b)*t/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+
+// ---------- mapa ----------
+const map=L.map('map',{zoomControl:true}).setView([-7.1,-36.6],7);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+const layer=L.layerGroup().addTo(map);
+
+// ---------- dados da viagem ----------
+let routes=[],sel=0,stations=[],chargers=[],A=null,B=null,plan=null,editing=null;
+
+async function geocode(q){
+ const m=q.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+ if(m)return{lat:+m[1],lon:+m[3],name:'Sua localização'};
+ const u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q='+encodeURIComponent(q);
+ const r=await fetch(u);if(!r.ok)throw new Error('busca de cidade fora do ar');
+ const j=await r.json();if(!j.length)throw new Error('não achei "'+q+'"');
+ return{lat:+j[0].lat,lon:+j[0].lon,name:j[0].display_name.split(',')[0]};
+}
+async function getRoutes(a,b){
+ const u=`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson&alternatives=3`;
+ const r=await fetch(u);if(!r.ok)throw new Error('serviço de rotas fora do ar');
+ const j=await r.json();if(j.code!=='Ok'||!j.routes.length)throw new Error('não achei rota de carro');
+ return j.routes.map(x=>{const pts=x.geometry.coordinates.map(c=>[c[1],c[0]]);const cum=[0];for(let i=1;i<pts.length;i++)cum[i]=cum[i-1]+hav(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]);
+  const sc=x.distance/1000/(cum[cum.length-1]||1);for(let i=0;i<cum.length;i++)cum[i]*=sc;
+  return{pts,cum,km:x.distance/1000,min:x.duration/60}});
+}
+function sample(rt,step){const out=[];let next=0;rt.pts.forEach((p,i)=>{if(rt.cum[i]>=next){out.push([p[0],p[1],rt.cum[i]]);next=rt.cum[i]+step}});const l=rt.pts.length-1;out.push([rt.pts[l][0],rt.pts[l][1],rt.cum[l]]);return out}
+async function getPOIs(rt){
+ const line=sample(rt,Math.max(2,rt.km/250)).map(p=>p[0].toFixed(4)+','+p[1].toFixed(4)).join(',');
+ const q=`[out:json][timeout:50];(nwr["amenity"="fuel"](around:1200,${line});nwr["amenity"="charging_station"](around:1500,${line}););out center tags;`;
+ const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
+ if(!r.ok)throw new Error('busca de postos fora do ar');
+ const j=await r.json();
+ const fine=sample(rt,0.5);
+ const pois=j.elements.map(el=>{const lat=el.lat??el.center?.lat,lon=el.lon??el.center?.lon;if(lat==null)return null;
+  let best=1e9,km=0;for(const p of fine){const d=hav(lat,lon,p[0],p[1]);if(d<best){best=d;km=p[2]}}
+  const t=el.tags||{};
+  return{id:el.type[0]+el.id,lat,lon,km,off:best,ev:t.amenity==='charging_station',name:t.name||t.brand||t.operator||(t.amenity==='charging_station'?'Eletroposto':'Posto sem nome'),brand:t.brand||'',city:t['addr:city']||''}}).filter(Boolean);
+ return{st:pois.filter(p=>!p.ev).sort((a,b)=>a.km-b.km),ch:pois.filter(p=>p.ev).sort((a,b)=>a.km-b.km)};
+}
+
+// ---------- preços ----------
+function price(s,f){
+ const u=S.prices[s.id];if(u&&u[f]>0)return{v:u[f],src:'Informado por você',user:true};
+ for(const c of SEEDS)if(hav(s.lat,s.lon,c.lat,c.lon)<=c.r)return{v:c[f],src:c.n+': '+c.src};
+ return{v:f==='g'?S.refg:S.refe,src:'Preço de referência',ref:true};
+}
+const kpl=f=>f==='g'?S.kg:S.ke;
+function best(s){const pg=price(s,'g'),pe=price(s,'e'),g=pg.v/S.kg*(pg.ref?1.02:1),e=pe.v/S.ke*(pe.ref?1.02:1);if(S.type!=='flex')return{f:'g',ck:g};return e<g?{f:'e',ck:e}:{f:'g',ck:g}}
+
+// ---------- plano de abastecimento ----------
+function candidates(D){
+ // um candidato por trecho de 10 km: o mais barato
+ const m=new Map();
+ for(const s of stations){if(s.km>=D-1)continue;const k=Math.floor(s.km/10),b=best(s);const cur=m.get(k);if(!cur||b.ck<cur.b.ck-1e-9||(Math.abs(b.ck-cur.b.ck)<1e-9&&s.off<cur.s.off))m.set(k,{s,b})}
+ return[...m.values()].sort((a,b)=>a.s.km-b.s.km);
+}
+function planFuel(){
+ const rt=routes[sel],D=rt.km,cs=candidates(D);
+ const L={g:0,e:0};L[S.type==='flex'?S.cur:'g']=S.tank*S.level;
+ const range=()=>L.g*S.kg+L.e*S.ke,free=()=>Math.max(0,S.tank-L.g-L.e);
+ const burn=d=>{const T=range(),k=T>0?Math.max(0,1-d/T):0;L.g*=k;L.e*=k;return T-d};
+ const start=range();let pos=0,ok=true,spent=0;const out=[];
+ for(let i=0;i<cs.length;i++){
+  const{s,b}=cs[i];const left=burn(s.km-pos);if(left<0){ok=false;break}pos=s.km;
+  let tgt=D;for(let j=i+1;j<cs.length;j++){if(cs[j].b.ck<b.ck){tgt=cs[j].s.km;break}}
+  const full=range()+free()*kpl(b.f),need=Math.min(full,tgt-s.km+S.res);
+  let lit=Math.max(0,need-range())/kpl(b.f);
+  if(lit>0)lit=Math.min(free(),Math.max(5,Math.ceil(lit)));
+  if(lit>0){L[b.f]+=lit;const p=price(s,b.f);spent+=lit*p.v;out.push({s,f:b.f,lit,p,cost:lit*p.v,arrive:Math.max(0,left),leave:range()})}
+ }
+ const end=ok?burn(D-pos):-1;if(end<0)ok=false;
+ const first=stations.find(s=>s.km<15);
+ const baseL=Math.max(0,D+S.res-start)/S.kg;
+ return{out,spent,end:Math.max(0,end),ok,base:first?baseL*price(first,'g').v:0,start};
+}
+function planEV(){
+ const rt=routes[sel],D=rt.km,R=S.evr;let rng=R*S.level,pos=0,ok=true;const out=[];
+ for(let i=0;i<chargers.length;i++){const c=chargers[i];if(c.km>=D)break;
+  rng-=c.km-pos;pos=c.km;if(rng<0){ok=false;break}
+  const next=chargers.slice(i+1).find(x=>x.km>c.km+5);const nk=next&&next.km<D?next.km:D;
+  if(rng-(nk-c.km)<S.res){out.push({s:c,arrive:rng});rng=R}
+ }
+ rng-=D-pos;if(rng<0)ok=false;
+ return{out,end:Math.max(0,rng),ok};
+}
+
+// ---------- tela ----------
+function render(){
+ for(const k of['type','cur','kg','ke','tank','evr','res','budget','refg','refe'])$('#'+k).value=S[k];
+ $('#cur').disabled=S.type!=='flex';
+ const ev=S.type==='ev';
+ $('#lvlLbl').textContent=ev?'Quanto tem de bateria agora?':'Quanto tem no tanque agora?';
+ $('#levels').innerHTML=LEVELS.map(([t,v])=>`<button type="button" data-v="${v}" aria-pressed="${S.level===v}">${t}</button>`).join('');
+ $('#routes').innerHTML=routes.map((r,i)=>`<button type="button" data-r="${i}" aria-pressed="${i===sel}">${i===0?'Mais rápida':'Opção '+(i+1)}: ${num(r.km)} km, ${fmtT(r.min)}</button>`).join('');
+ if(!routes.length){drawMap();return}
+ const rt=routes[sel],t=$('#vTitle');
+ let w='',stopsHTML='';
+ if(ev){
+  plan=planEV();
+  t.className='big ev';t.textContent=plan.out.length?`Recarregue ${plan.out.length===1?'1 vez':plan.out.length+' vezes'}`:'Dá pra ir direto';
+  $('#vWhy').textContent=chargers.length?`Achei ${chargers.length} eletroposto${chargers.length>1?'s':''} perto da rota no OpenStreetMap. Chegada com uns ${num(plan.end)} km de bateria.`:'Não achei eletropostos cadastrados perto desta rota no OpenStreetMap.';
+  $('#vTotLbl').textContent='Paradas para recarga';$('#vTotal').textContent=String(plan.out.length);$('#vSave').textContent='';
+  if(!plan.ok)w+='<div class="warn">Com essa bateria não dá pra chegar: falta eletroposto no caminho ou a autonomia é curta.</div>';
+  $('#stopsTitle').textContent='Onde recarregar';
+  stopsHTML=plan.out.map(o=>`<li class="stop"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de bateria${o.s.city?' · '+esc(o.s.city):''}.</p></div><div class="buy"><b class="ev">Recarregar</b></div></li>`).join('');
+ }else{
+  if(!stations.length){plan={out:[],end:0,ok:true};t.className='big';t.textContent='Procurando postos…';$('#vWhy').textContent='Assim que os postos da rota chegarem, o plano aparece aqui.';$('#vTotal').textContent='—';$('#vSave').textContent='';$('#vWarn').innerHTML='';$('#stops').innerHTML='';renderEdit();drawMap();return}
+  plan=planFuel();
+  const lit={e:0,g:0};plan.out.forEach(o=>lit[o.f]+=o.lit);const main=lit.e>=lit.g?'e':'g';
+  const refOnly=plan.out.length&&plan.out.every(o=>o.p.ref);
+  if(!plan.out.length){t.className='big';t.textContent='Nem precisa parar';$('#vWhy').textContent=`Com o que tem no tanque você chega com uns ${num(plan.end)} km de folga.`}
+  else{t.className='big '+main;t.textContent='Use '+FN[main].toUpperCase();
+   const top=plan.out.reduce((a,b)=>b.lit>a.lit?b:a);
+   const ratio=price(top.s,'e').v/price(top.s,'g').v;
+   $('#vWhy').textContent=(S.type==='flex'?`No seu carro o etanol compensa até ${num(S.ke/S.kg*100)}% do preço da gasolina; onde você mais abastece ele está a ${num(ratio*100)}%. `:'')+`Pare ${plan.out.length===1?'uma vez':plan.out.length+' vezes'} e chegue com uns ${num(plan.end)} km de folga.`}
+  $('#vTotLbl').textContent='Você paga nos postos';$('#vTotal').textContent=brl(plan.spent);
+  const sv=plan.base-plan.spent;$('#vSave').textContent=sv>1?`${brl(sv)} a menos que encher só de gasolina na saída`:'';
+  if(!plan.ok)w+='<div class="warn">Com esse tanque e essa folga o carro não alcança o próximo posto. Saia com mais combustível ou diminua a folga.</div>';
+  if(refOnly)w+='<div class="warn">Ainda não há preço informado nos postos desta rota: o plano usa o preço de referência. Toque num posto para informar o preço da bomba.</div>';
+  if(S.budget>0&&plan.spent>S.budget)w+=`<div class="warn">O plano passa ${brl(plan.spent-S.budget)} do que você quer gastar. Saia com mais combustível ou diminua a folga.</div>`;
+  $('#stopsTitle').textContent='Onde parar e quanto colocar';
+  stopsHTML=plan.out.map(o=>`<li class="stop"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de autonomia; saindo, roda ~${num(o.leave)} km. ${esc(o.p.src)}.</p><button class="link" data-edit="${o.s.id}">Informar preço</button></div><div class="buy"><b class="${o.f}">${num(o.lit)} L de ${FN[o.f]}</b><span>${brl(o.p.v)}/l · ${brl(o.cost)}</span></div></li>`).join('');
+ }
+ $('#vWarn').innerHTML=w;
+ $('#stops').innerHTML=stopsHTML+`<li class="stop"><div class="km">${num(rt.km)}<small>km</small></div><div><h3>${esc(B.name)}: chegada</h3><p>Chega com ~${num(plan.end)} km de folga.</p></div><div class="buy"><span>${fmtT(rt.min)}</span></div></li>`;
+ renderEdit();drawMap();
+}
+const fmtT=m=>{const h=Math.floor(m/60),mm=Math.round(m%60);return h?`${h}h${String(mm).padStart(2,'0')}`:`${mm} min`};
+
+let drawnKey='';
+function drawMap(){
+ layer.clearLayers();if(!routes.length)return;
+ routes.forEach((r,i)=>{if(i!==sel)L.polyline(r.pts,{color:'#8a9099',weight:5,opacity:.7}).on('click',()=>{sel=i;render()}).addTo(layer)});
+ const rt=routes[sel];
+ L.polyline(rt.pts,{color:'#061a33',weight:10,opacity:.85}).addTo(layer);L.polyline(rt.pts,{color:'#1ec8e8',weight:5}).addTo(layer);
+ const ev=S.type==='ev',chosen=new Set((plan?.out||[]).map(o=>o.s.id));
+ (ev?chargers:stations).forEach(s=>{if(chosen.has(s.id))return;
+  L.circleMarker([s.lat,s.lon],{radius:5,color:'#fff',weight:1.5,fillColor:ev?'#1550e6':'#061a33',fillOpacity:.9}).bindTooltip(s.name).on('click',()=>openEdit(s.id)).addTo(layer)});
+ (plan?.out||[]).forEach(o=>{const cls=ev?'ev':o.f,txt=ev?'Recarga':num(o.lit)+' L';
+  L.marker([o.s.lat,o.s.lon],{icon:L.divIcon({className:'',html:`<span class="pin ${cls}">${txt}</span>`,iconSize:[0,0]})}).on('click',()=>openEdit(o.s.id)).addTo(layer);
+  L.circleMarker([o.s.lat,o.s.lon],{radius:7,color:'#fff',weight:2,fillColor:ev?'#1550e6':(o.f==='e'?'#3a8f00':'#b85f00'),fillOpacity:1}).addTo(layer)});
+ L.circleMarker(rt.pts[0],{radius:9,color:'#061a33',weight:3,fillColor:'#b8f000',fillOpacity:1}).bindTooltip('Saída: '+A.name).addTo(layer);
+ L.circleMarker(rt.pts[rt.pts.length-1],{radius:9,color:'#1550e6',weight:3,fillColor:'#fff',fillOpacity:1}).bindTooltip('Chegada: '+B.name).addTo(layer);
+ const key=A.lat+','+B.lat+','+sel;if(key!==drawnKey){map.fitBounds(L.latLngBounds(rt.pts),{padding:[24,24]});drawnKey=key}
+}
+
+function openEdit(id){if(S.type==='ev')return;editing=id;renderEdit();$('#edit').scrollIntoView({behavior:'smooth',block:'center'})}
+function renderEdit(){
+ const s=stations.find(x=>x.id===editing),box=$('#edit');
+ if(!s||S.type==='ev'){box.innerHTML='';return}
+ const g=price(s,'g'),e=price(s,'e');
+ box.innerHTML=`<div class="edit"><div><b>${esc(s.name)}</b> · km ${num(s.km)}${s.city?' · '+esc(s.city):''}<div class="note" style="margin:2px 0 0">Agora: gasolina ${brl(g.v)}, etanol ${brl(e.v)} (${esc(g.src)})</div></div>
+ <div class="row"><label class="f">Gasolina (R$/l)<input id="eg" type="number" step="0.01" inputmode="decimal" value="${g.user?g.v.toFixed(2):''}" placeholder="${g.v.toFixed(2)}"></label>
+ <label class="f">Etanol (R$/l)<input id="ee" type="number" step="0.01" inputmode="decimal" value="${e.user?e.v.toFixed(2):''}" placeholder="${e.v.toFixed(2)}"></label>
+ <button class="save" id="esave" type="button">Salvar preço</button></div>
+ <div><button class="link" id="eclose" type="button">Fechar</button>${S.prices[s.id]?' · <button class="link" id="eclear" type="button">Apagar preço informado</button>':''}</div></div>`;
+}
+$('#edit').addEventListener('click',e=>{
+ const id=e.target.id;if(!editing)return;
+ if(id==='esave'){const g=parseFloat($('#eg').value),v=parseFloat($('#ee').value);const p={};if(g>=3&&g<=12)p.g=g;if(v>=2&&v<=10)p.e=v;if(p.g||p.e){S.prices[editing]=Object.assign(S.prices[editing]||{},p);save()}editing=null;render()}
+ if(id==='eclose'){editing=null;renderEdit()}
+ if(id==='eclear'){delete S.prices[editing];save();render()}
+});
+
+// ---------- eventos ----------
+const stt=$('#status');
+$('#trip').addEventListener('submit',async e=>{
+ e.preventDefault();const o=$('#orig').value.trim(),d=$('#dest').value.trim();
+ if(!o||!d){stt.textContent='Preencha a saída e o destino.';return}
+ const btn=$('#go');btn.disabled=true;
+ try{
+  stt.textContent='Achando as cidades…';[A,B]=await Promise.all([geocode(o),geocode(d)]);
+  stt.textContent='Traçando a rota…';routes=await getRoutes(A,B);sel=0;
+  stt.textContent='Procurando os postos no caminho…';stations=[];chargers=[];render();
+  try{const p=await getPOIs(routes[0]);stations=p.st;chargers=p.ch;stt.textContent=`${num(routes[0].km)} km · ${stations.length} postos e ${chargers.length} eletropostos perto da rota.`}
+  catch(err){stt.textContent='Rota pronta, mas a busca de postos falhou ('+err.message+'). Tente de novo em instantes.'}
+  render();
+ }catch(err){stt.textContent='Não deu certo: '+(err.message||'tente de novo')+'.'}
+ finally{btn.disabled=false}
+});
+$('#gps').addEventListener('click',()=>{
+ if(!navigator.geolocation){stt.textContent='Este aparelho não informa a localização.';return}
+ stt.textContent='Pegando sua localização…';
+ navigator.geolocation.getCurrentPosition(p=>{$('#orig').value=p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5);stt.textContent='Localização pronta. Agora o destino.'},()=>{stt.textContent='Não consegui sua localização. Digite a cidade.'},{timeout:10000});
+});
+$('#routes').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;sel=+b.dataset.r;render();
+ stt.textContent='Procurando os postos desta rota…';
+ try{const p=await getPOIs(routes[sel]);stations=p.st;chargers=p.ch;stt.textContent=`${num(routes[sel].km)} km · ${stations.length} postos e ${chargers.length} eletropostos perto da rota.`}catch(err){stt.textContent='A busca de postos falhou. Tente de novo.'}
+ render()});
+$('#levels').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.level=+b.dataset.v;save();render()});
+$('#stops').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(b)openEdit(b.dataset.edit)});
+for(const k of['type','cur','res','budget'])$('#'+k).addEventListener('change',e=>{S[k]=k==='type'||k==='cur'?e.target.value:+e.target.value;save();render()});
+for(const k of['kg','ke','tank','evr','refg','refe'])$('#'+k).addEventListener('change',e=>{const v=parseFloat(e.target.value);if(v>0){S[k]=v;save()}render()});
+render();
+}
+</script>
+</body></html>
