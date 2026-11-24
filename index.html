@@ -172,13 +172,20 @@ async function getRoutes(a,b){
 }
 function sample(rt,step){const out=[];let next=0;rt.pts.forEach((p,i)=>{if(rt.cum[i]>=next){out.push([p[0],p[1],rt.cum[i]]);next=rt.cum[i]+step}});const l=rt.pts.length-1;out.push([rt.pts[l][0],rt.pts[l][1],rt.cum[l]]);return out}
 const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function overpass(q){
  const ck='bpfuel_poi_'+[...q].reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0);
  try{const c=JSON.parse(localStorage.getItem(ck)||'null');if(c&&Date.now()-c.t<7*864e5)return c.j}catch(e){}
- const ctrls=OVERPASS.map(()=>new AbortController());
- const one=async(u,i)=>{await new Promise(r=>setTimeout(r,i*3000));const t=setTimeout(()=>ctrls[i].abort(),90000);try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctrls[i].signal});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!j.elements||/runtime error/i.test(j.remark||''))throw new Error('resposta incompleta');return j}finally{clearTimeout(t)}};
- let j;try{j=await Promise.any(OVERPASS.map(one))}catch(e){throw new Error('busca de postos fora do ar, tente de novo em alguns minutos')}
- ctrls.forEach(c=>{try{c.abort()}catch(e){}});
+ const ctrl=new AbortController(),t0=Date.now();let done=false;
+ const one=async(u,i)=>{await sleep(i*2500);let last;
+  while(!done&&Date.now()-t0<120000){
+   const sig=(AbortSignal.any&&AbortSignal.timeout)?AbortSignal.any([ctrl.signal,AbortSignal.timeout(60000)]):ctrl.signal;
+   try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:sig});
+    if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();
+    if(!j.elements||/runtime error/i.test(j.remark||''))throw new Error('resposta incompleta');return j}
+   catch(e){last=e;if(done||ctrl.signal.aborted)throw e;await sleep(4000)}}
+  throw last||new Error('tempo esgotado')};
+ let j;try{j=await Promise.any(OVERPASS.map(one))}catch(e){throw new Error('busca de postos fora do ar, tente de novo em alguns minutos')}finally{done=true;ctrl.abort()}
  try{localStorage.setItem(ck,JSON.stringify({t:Date.now(),j}))}catch(e){}
  return j;
 }
