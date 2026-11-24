@@ -340,7 +340,7 @@ function anpPrice(s,f){
 }
 
 
-let CID=null;const cidP=fetch('cidades.json').then(r=>r.json()).then(j=>{CID=j.c.map(x=>{const a=x.split('|');return{n:a[0],u:a[1],lat:+a[2],lon:+a[3],k:norm(a[0])}}).filter(c=>isFinite(c.lat)&&a2(c));return CID}).catch(()=>null);
+let CID=null;const cidP=fetch('cidades.json?v=2',{cache:'no-cache'}).then(r=>r.json()).then(j=>{CID=j.c.map(x=>{const a=x.split('|');return{n:a[0],u:a[1],lat:+a[2],lon:+a[3],k:norm(a[0])}}).filter(c=>isFinite(c.lat)&&a2(c));return CID}).catch(()=>null);
 function a2(c){return c.lat!==0||c.lon!==0}
 function anpPts(){if(!ANP||!CID)return[];if(anpPts.c&&anpPts.src===ANP)return anpPts.c;const idx={};for(const c of CID)idx[c.k+'|'+c.u]=c;const out=[];for(const k of Object.keys(ANP.municipios)){const i=k.lastIndexOf('|');const c=idx[norm(k.slice(0,i))+'|'+k.slice(i+1)];if(c)out.push({lat:c.lat,lon:c.lon,u:c.u,v:ANP.municipios[k],n:c.n})}anpPts.src=ANP;return anpPts.c=out}
 function regAvg(lat,lon,f,R=150){const pts=anpPts();let sw=0,sv=0,n=0;for(const p of pts){const v=p.v[f];if(!v)continue;const d=hav(lat,lon,p.lat,p.lon);if(d>R)continue;const w=1/(d+15);sw+=w;sv+=w*v;n++}return n?{v:Math.round(sv/sw*100)/100,n}:null}
@@ -776,7 +776,7 @@ b.addEventListener('click',async()=>{if(ev){ev.prompt();try{await ev.userChoice}
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA=null,LOADING=null,myUF='';try{myUF=localStorage.getItem('bp_uf')||''}catch(e){}
-const load=()=>LOADING||(LOADING=fetch('cidades.json').then(r=>r.json()).then(j=>{DATA={uf:j.uf,ufn:Object.fromEntries(Object.entries(j.uf).map(([k,v])=>[k,norm(v)])),c:j.c.map(x=>{const[n,u]=x.split('|');return{n,u,k:norm(n)}})};return DATA}).catch(()=>{LOADING=null;return null}));
+const load=()=>LOADING||(LOADING=fetch('cidades.json?v=2',{cache:'no-cache'}).then(r=>r.json()).then(j=>{DATA={uf:j.uf,ufn:Object.fromEntries(Object.entries(j.uf).map(([k,v])=>[k,norm(v)])),c:j.c.map(x=>{const[n,u]=x.split('|');return{n,u,k:norm(n)}})};return DATA}).catch(()=>{LOADING=null;return null}));
 function search(q){
  if(!DATA)return[];
  let city=q,uf='';const i=q.lastIndexOf(',');
