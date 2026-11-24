@@ -162,6 +162,9 @@ footer{color:#6f8299;font-size:12.5px;padding:26px 0 40px;text-align:center}
 .trip{grid-template-columns:1fr}.go{width:100%}.verdict{grid-template-columns:1fr}.total{text-align:left}
 .stop{grid-template-columns:60px minmax(0,1fr)}.buy{grid-column:2;text-align:left;white-space:normal;margin-top:6px}.buy b{font-size:21px}.edit .row{grid-template-columns:1fr 1fr}.edit .row .save{grid-column:1/-1}.card{padding:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.bar .inst{margin-left:10px;min-height:32px;padding:0 14px;border-radius:16px;border:0;background:linear-gradient(90deg,#b6f23a,#22d3ee);color:#04101f;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.inst-tip{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);width:min(340px,92vw);padding:12px 16px;border-radius:12px;background:#0d1b2e;color:#e8f0fb;border:1px solid rgba(34,211,238,.35);z-index:9999;font-size:14px;line-height:1.4;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+@media(max-width:480px){.bar .live{display:none}}
 .bp-dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.6)}
 </style></head><body>
 <div class="bar"><div class="wrap"><img src="logo.png" alt="" width="31" height="38"><b><span>BP</span> FUEL</b><span class="live"><i></i>Rotas e postos ao vivo</span></div></div>
@@ -270,7 +273,7 @@ async function geocode(q){
  const u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q='+encodeURIComponent(q);
  const r=await fetch(u);if(!r.ok)throw new Error('busca de cidade fora do ar');
  const j=await r.json();if(!j.length)throw new Error('não achei "'+q+'"');
- return{lat:+j[0].lat,lon:+j[0].lon,name:j[0].display_name.split(',')[0]};
+ return{lat:+j[0].lat,lon:+j[0].lon,name:j[0].display_name.split(',')[0],uf:ufOf(j[0].display_name)};
 }
 async function getRoutes(a,b){
  const u=`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson&alternatives=3`;
@@ -299,21 +302,46 @@ async function overpass(q){
  try{localStorage.setItem(ck,JSON.stringify({t:Date.now(),j}))}catch(e){}
  return j;
 }
+
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const UFS={'ACRE':'AC','ALAGOAS':'AL','AMAPA':'AP','AMAZONAS':'AM','BAHIA':'BA','CEARA':'CE','DISTRITO FEDERAL':'DF','ESPIRITO SANTO':'ES','GOIAS':'GO','MARANHAO':'MA','MATO GROSSO':'MT','MATO GROSSO DO SUL':'MS','MINAS GERAIS':'MG','PARA':'PA','PARAIBA':'PB','PARANA':'PR','PERNAMBUCO':'PE','PIAUI':'PI','RIO DE JANEIRO':'RJ','RIO GRANDE DO NORTE':'RN','RIO GRANDE DO SUL':'RS','RONDONIA':'RO','RORAIMA':'RR','SANTA CATARINA':'SC','SAO PAULO':'SP','SERGIPE':'SE','TOCANTINS':'TO'};
+const ufOf=dn=>{for(const p of String(dn||'').split(',').reverse()){const u=UFS[norm(p)];if(u)return u}return''};
+const brandOf=b=>{const x=norm(b);if(!x)return'';if(/PETROBRAS|^BR\b|VIBRA/.test(x))return'Petrobras';if(/IPIRANGA/.test(x))return'Ipiranga';if(/SHELL|RAIZEN/.test(x))return'Shell';if(/^ALE\b/.test(x))return'ALE';return String(b).trim()};
+let ANP=null,ANPX={};
+fetch('precos-anp.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(!j)return;ANP=j;ANPX={};for(const k of Object.keys(j.municipios||{})){const n=k.split('|')[0];(ANPX[n]=ANPX[n]||[]).push(k)}try{if(routes.length)render()}catch(e){}}).catch(()=>{});
+const anpWeek=()=>{const a=ANP.semana[0],b=ANP.semana[1];return a.slice(8,10)+' a '+b.slice(8,10)+'/'+b.slice(5,7)};
+function anpPrice(s,f){
+ if(!ANP)return null;
+ const ufs=[A&&A.uf,B&&B.uf].filter(Boolean);
+ const t=norm(s.town);
+ if(t&&ANPX[t]){const ks=ANPX[t];const k=ks.find(k=>ufs.includes(k.split('|')[1]))||(ks.length===1?ks[0]:null);const v=k&&ANP.municipios[k][f];if(v)return{v,src:'ANP, média de '+s.town+' (semana de '+anpWeek()+')'}}
+ const tot=routes[sel]?routes[sel].km:0;const uf=(B&&B.uf&&s.km>tot/2)?B.uf:(A&&A.uf)||(B&&B.uf);
+ const v=uf&&ANP.estados[uf]&&ANP.estados[uf][f];if(v)return{v,src:'ANP, média do estado '+uf+' (semana de '+anpWeek()+')'};
+ return null;
+}
+
 async function getPOIs(rt){
  const line=sample(rt,Math.max(2,rt.km/250)).map(p=>p[0].toFixed(4)+','+p[1].toFixed(4)).join(',');
- const q=`[out:json][timeout:50];(nwr["amenity"="fuel"](around:1200,${line});nwr["amenity"="charging_station"](around:1500,${line}););out center tags;`;
+ const q='[out:json][timeout:60];(nwr["amenity"="fuel"](around:1200,'+line+');nwr["amenity"="charging_station"](around:1500,'+line+');node["place"~"^(city|town|village)$"](around:8000,'+line+'););out center tags;';
  const j=await overpass(q);
  const fine=sample(rt,0.5);
- const pois=j.elements.map(el=>{const lat=el.lat??el.center?.lat,lon=el.lon??el.center?.lon;if(lat==null)return null;
+ const places=j.elements.filter(el=>el.tags&&el.tags.place&&el.tags.name&&el.lat!=null).map(el=>({n:el.tags.name,lat:el.lat,lon:el.lon,w:el.tags.place==='city'?1.6:el.tags.place==='town'?1.25:1}));
+ const pois=j.elements.map(el=>{const t=el.tags||{};if(!t.amenity)return null;
+  const lat=el.lat??el.center?.lat,lon=el.lon??el.center?.lon;if(lat==null)return null;
   let best=1e9,km=0;for(const p of fine){const d=hav(lat,lon,p[0],p[1]);if(d<best){best=d;km=p[2]}}
-  const t=el.tags||{};
-  return{id:el.type[0]+el.id,lat,lon,km,off:best,ev:t.amenity==='charging_station',name:t.name||t.brand||t.operator||(t.amenity==='charging_station'?'Eletroposto':'Posto sem nome'),brand:t.brand||'',city:t['addr:city']||''}}).filter(Boolean);
+  const ev=t.amenity==='charging_station';
+  let town=t['addr:city']||'';if(!town){let bd=12;for(const p of places){const d=hav(lat,lon,p.lat,p.lon)/p.w;if(d<bd){bd=d;town=p.n}}}
+  const brand=brandOf(t.brand||t.operator||'');
+  const base=t.name||brand||(ev?'Eletroposto':'Posto');
+  const name=town&&!norm(base).includes(norm(town))?base+' · '+town:base;
+  return{id:el.type[0]+el.id,lat,lon,km,off:best,ev,name,brand,city:'',town}}).filter(Boolean);
  return{st:pois.filter(p=>!p.ev).sort((a,b)=>a.km-b.km),ch:pois.filter(p=>p.ev).sort((a,b)=>a.km-b.km)};
 }
 
 // ---------- preços ----------
 function price(s,f){
  const u=S.prices[s.id];if(u&&u[f]>0)return{v:u[f],src:'Informado por você',user:true};
+ const an=anpPrice(s,f);if(an)return an;
  for(const c of SEEDS)if(c[f]&&hav(s.lat,s.lon,c.lat,c.lon)<=c.r)return{v:c[f],src:c.n+': '+c.src};
  return{v:f==='g'?S.refg:f==='e'?S.refe:S.refd,src:'Preço de referência',ref:true};
 }
@@ -464,9 +492,115 @@ async function fipe2(path){
 // consumo de ficha técnica conhecido (estrada)
 const KNOWN=[{re:/s-?10/i,re2:/2[.,]4/,y0:2012,y1:2016,type:'flex',g:9.5,e:7.3,tank:76,src:'Ficha técnica da S10 2.4 Flex (consumo na estrada)'}];
 const r1=v=>Math.round(v*10)/10;
+
+// Consumo na estrada, tabela PBEV 2026 do Inmetro (km/l). d=motor, t=turbo, h=hibrido, a=automatico, k=tanque aproximado, f=d (diesel), y=ano minimo
+const PBE=[
+ {m:/^mobi/i,d:1.0,e:10.9,g:15.5,k:47,y:2017},
+ {m:/^argo/i,d:1.0,e:10.4,g:14.5,k:48,y:2018},
+ {m:/^argo/i,d:1.3,a:false,e:10.2,g:14.7,k:48,y:2018},
+ {m:/^argo/i,d:1.3,a:true,e:10.3,g:14.3,k:48,y:2018},
+ {m:/^strada/i,d:1.3,a:false,e:10.0,g:14.4,k:55,y:2021},
+ {m:/^strada/i,d:1.3,a:true,e:9.7,g:13.5,k:55,y:2021},
+ {m:/^strada/i,d:1.0,t:true,e:9.2,g:13.1,k:55,y:2021},
+ {m:/^pulse/i,d:1.3,e:10.4,g:14.6,k:47,y:2022},
+ {m:/^pulse/i,d:1.0,t:true,e:10.0,g:14.4,k:47,y:2022},
+ {m:/^pulse/i,d:1.0,h:true,e:10.2,g:14.4,k:47,y:2025},
+ {m:/^pulse/i,d:1.3,t:true,e:8.8,g:12.2,k:47,y:2022},
+ {m:/^fastback/i,d:1.0,t:true,e:10.1,g:14.3,k:47,y:2023},
+ {m:/^fastback/i,d:1.0,h:true,e:9.8,g:13.9,k:47,y:2025},
+ {m:/^fastback/i,d:1.3,t:true,e:9.5,g:13.3,k:47,y:2023},
+ {m:/^toro/i,d:1.3,t:true,e:7.8,g:10.9,k:55,y:2022},
+ {m:/^toro/i,d:2.2,t:true,f:'d',g:13.4,k:60,y:2025},
+ {m:/^toro/i,d:2.2,f:'d',g:13.4,k:60,y:2025},
+ {m:/^polo/i,d:1.0,e:10.9,g:15.7,k:52,y:2018},
+ {m:/^polo/i,d:1.0,t:true,e:11.0,g:15.8,k:52,y:2018},
+ {m:/^virtus/i,d:1.0,t:true,a:false,e:11.2,g:15.8,k:52,y:2018},
+ {m:/^virtus/i,d:1.0,t:true,a:true,e:10.3,g:14.8,k:52,y:2018},
+ {m:/^virtus/i,d:1.4,t:true,e:9.9,g:14.0,k:52,y:2018},
+ {m:/^t-?cross/i,d:1.0,t:true,e:10.2,g:14.5,k:52,y:2019},
+ {m:/^t-?cross/i,d:1.4,t:true,e:9.9,g:14.2,k:52,y:2019},
+ {m:/^nivus/i,d:1.0,t:true,e:10.3,g:14.8,k:52,y:2020},
+ {m:/^nivus/i,d:1.4,t:true,e:9.9,g:14.2,k:52,y:2020},
+ {m:/^saveiro/i,d:1.6,e:8.7,g:12.6,k:55,y:2017},
+ {m:/^tera/i,d:1.0,t:true,e:10.3,g:14.7,k:50,y:2025},
+ {m:/^onix(?!.*(plus|sedan|joy))/i,d:1.0,a:false,e:11.3,g:16.3,k:44,y:2020},
+ {m:/^onix(?!.*(plus|sedan|joy))/i,d:1.0,t:true,a:false,e:12.4,g:17.7,k:44,y:2020},
+ {m:/^onix(?!.*(plus|sedan|joy))/i,d:1.0,t:true,a:true,e:10.9,g:15.3,k:44,y:2020},
+ {m:/^onix.*(plus|sedan)/i,d:1.0,a:false,e:12.1,g:17.1,k:44,y:2020},
+ {m:/^onix.*(plus|sedan)/i,d:1.0,t:true,a:false,e:12.3,g:16.8,k:44,y:2020},
+ {m:/^onix.*(plus|sedan)/i,d:1.0,t:true,a:true,e:11.2,g:16.0,k:44,y:2020},
+ {m:/^tracker/i,d:1.0,t:true,e:9.9,g:13.8,k:44,y:2021},
+ {m:/^tracker/i,d:1.2,t:true,e:9.7,g:13.7,k:44,y:2021},
+ {m:/^montana/i,d:1.2,t:true,e:9.7,g:13.6,k:44,y:2023},
+ {m:/^s-?10/i,d:2.8,t:true,f:'d',a:false,g:11.4,k:76,y:2017},
+ {m:/^s-?10/i,d:2.8,t:true,f:'d',a:true,g:11.8,k:76,y:2017},
+ {m:/^s-?10/i,d:2.8,f:'d',a:false,g:11.4,k:76,y:2017},
+ {m:/^s-?10/i,d:2.8,f:'d',a:true,g:11.8,k:76,y:2017},
+ {m:/^spin/i,d:1.8,a:false,e:8.8,g:12.6,k:53,y:2013},
+ {m:/^spin/i,d:1.8,a:true,e:9.1,g:13.1,k:53,y:2013},
+ {m:/^hb20(?![sx])/i,d:1.0,e:10.7,g:15.4,k:50,y:2020},
+ {m:/^hb20(?![sx])/i,d:1.0,t:true,e:10.2,g:14.7,k:50,y:2020},
+ {m:/^hb20s/i,d:1.0,e:10.9,g:15.4,k:50,y:2020},
+ {m:/^hb20s/i,d:1.0,t:true,e:10.7,g:15.2,k:50,y:2020},
+ {m:/^creta/i,d:1.0,t:true,e:9.0,g:12.7,k:50,y:2022},
+ {m:/^kwid/i,d:1.0,e:10.7,g:15.4,k:38,y:2017},
+ {m:/^kardian/i,d:1.0,t:true,e:9.8,g:13.9,k:50,y:2024},
+ {m:/^duster/i,d:1.6,a:false,e:8.4,g:12.3,k:50,y:2021},
+ {m:/^duster/i,d:1.6,a:true,e:8.3,g:11.4,k:50,y:2021},
+ {m:/^duster/i,d:1.3,t:true,e:8.6,g:12.3,k:50,y:2021},
+ {m:/^corolla(?!.*cross)/i,d:2.0,e:10.1,g:14.6,k:50,y:2020},
+ {m:/^corolla(?!.*cross)/i,d:1.8,h:true,e:10.7,g:15.2,k:43,y:2020},
+ {m:/^corolla.*cross/i,d:2.0,e:9.2,g:13.1,k:47,y:2021},
+ {m:/^corolla.*cross/i,d:1.8,h:true,e:9.9,g:14.0,k:36,y:2021},
+ {m:/^hilux(?!.*sw4)/i,d:2.8,f:'d',a:false,g:10.8,k:80,y:2016},
+ {m:/^hilux(?!.*sw4)/i,d:2.8,f:'d',a:true,g:10.0,k:80,y:2016},
+ {m:/^hilux(?!.*sw4)/i,d:2.8,t:true,f:'d',a:false,g:10.8,k:80,y:2016},
+ {m:/^hilux(?!.*sw4)/i,d:2.8,t:true,f:'d',a:true,g:10.0,k:80,y:2016},
+ {m:/^yaris.*cross/i,d:1.5,e:10.2,g:14.3,k:42,y:2025},
+ {m:/^yaris.*cross/i,d:1.5,h:true,e:10.7,g:15.3,k:36,y:2025},
+ {m:/^renegade(?!.*4x4)/i,d:1.3,t:true,e:8.9,g:12.4,k:55,y:2022},
+ {m:/^renegade.*4x4/i,d:1.3,t:true,e:7.4,g:10.1,k:55,y:2022},
+ {m:/^compass/i,d:1.3,t:true,e:8.6,g:12.1,k:55,y:2022},
+ {m:/^kicks/i,d:1.0,t:true,e:9.9,g:14.3,k:41,y:2025},
+ {m:/^city(?!.*hatch)/i,d:1.5,e:10.4,g:15.5,k:40,y:2022},
+ {m:/^city.*hatch/i,d:1.5,e:10.5,g:15.0,k:40,y:2022},
+ {m:/^hr-?v/i,d:1.5,e:9.9,g:13.9,k:50,y:2023},
+ {m:/^hr-?v/i,d:1.5,t:true,e:9.2,g:13.0,k:50,y:2023},
+ {m:/^c3(?!.*aircross)/i,d:1.0,e:10.3,g:14.4,k:47,y:2023},
+ {m:/^c3(?!.*aircross)/i,d:1.0,t:true,e:8.9,g:12.9,k:47,y:2023},
+ {m:/^basalt/i,d:1.0,e:10.1,g:14.3,k:47,y:2024},
+ {m:/^basalt/i,d:1.0,t:true,e:9.6,g:13.7,k:47,y:2024},
+ {m:/^208\b/i,d:1.0,e:10.8,g:15.3,k:47,y:2023},
+ {m:/^208\b/i,d:1.0,t:true,e:9.7,g:13.7,k:47,y:2023},
+ {m:/^208\b/i,d:1.0,h:true,e:9.6,g:13.8,k:47,y:2025},
+ {m:/^2008\b/i,d:1.0,t:true,e:9.8,g:14.1,k:47,y:2025},
+ {m:/^2008\b/i,d:1.0,h:true,e:9.6,g:13.7,k:47,y:2025},
+ {m:/ranger/i,d:2.0,t:true,f:'d',a:true,g:11.8,k:80,y:2024},
+ {m:/ranger/i,d:2.0,t:true,f:'d',a:false,g:11.2,k:80,y:2024},
+ {m:/ranger/i,d:3.0,f:'d',g:10.1,k:80,y:2024},
+ {m:/ranger/i,d:3.0,t:true,f:'d',g:10.1,k:80,y:2024}];
+function pbe(n,y,fc){
+ const m=n.match(/(\d)[.,](\d)/);if(!m)return null;const d=+(m[1]+'.'+m[2]);
+ const hyb=/h[ií]brid|hybrid|\bhev\b/i.test(n);
+ const turbo=/turbo|\btb\b|tsi|t200|t270|tgdi|\btce\b|ecoboost|\btdi\b|\d\.\dt\b/i.test(n);
+ const aut=/\baut\b|aut\.|autom|cvt|\bat\b|\bdct\b|tiptronic/i.test(n);
+ const dsl=fc==='3'||/diesel|dies\./i.test(n);
+ for(const p of PBE){
+  if(!p.m.test(n)||Math.abs(p.d-d)>.05)continue;
+  if(!!p.h!==hyb)continue;
+  if(!p.h&&!!p.t!==turbo)continue;
+  if((p.f==='d')!==dsl)continue;
+  if(p.a!==undefined&&p.a!==aut)continue;
+  if(y<(p.y||2016))continue;
+  return{type:p.f==='d'?'d':'flex',g:p.g,e:p.f==='d'?r1(p.g*.7):p.e,tank:p.k,evr:S.evr,src:'Consumo na estrada pelo Inmetro (tabela PBEV 2026). Tanque aproximado: confira no manual.',est:false};
+ }
+ return null;
+}
+
 function spec(name,code){
  const y=parseInt(code),fc=String(code).split('-')[1],n=name;
  for(const k of KNOWN)if(k.re.test(n)&&k.re2.test(n)&&y>=k.y0&&y<=k.y1)return{type:k.type,g:k.g,e:k.e,tank:k.tank,evr:S.evr,src:k.src,est:false};
+ {const pb=pbe(n,y,fc);if(pb)return pb;}
  const ev=/el[eé]tric|\bev\b|e-tron|\bbev\b/i.test(n)&&!/h[ií]br/i.test(n);
  const diesel=fc==='3'||/diesel|\btdi\b|\bcrdi\b|\bdci\b|\bhdi\b|\btdci\b|\bd-?4d\b|\bcdi\b|dies\./i.test(n);
  const flex=!diesel&&/flex|f\.?power|bi-?comb|e\.?torq|\bt\.?flex|tot\.?flex/i.test(n);
@@ -581,5 +715,15 @@ $('#back').addEventListener('click',()=>applySpec(S.spec));
 loadBrands();
 render();
 }
+</script>
+<script>
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+(()=>{const live=document.querySelector('.bar .live');if(!live)return;const b=document.createElement('button');b.type='button';b.className='inst';b.textContent='Instalar app';b.hidden=true;live.after(b);
+const tip=document.createElement('div');tip.className='inst-tip';tip.hidden=true;tip.textContent='No iPhone: toque em Compartilhar (quadrado com a seta) e depois em "Adicionar à Tela de Início".';document.body.appendChild(tip);
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;let ev=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;if(!standalone)b.hidden=false});
+addEventListener('appinstalled',()=>{b.hidden=true;ev=null});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!standalone)b.hidden=false;
+b.addEventListener('click',async()=>{if(ev){ev.prompt();try{await ev.userChoice}catch(e){}ev=null;b.hidden=true}else tip.hidden=!tip.hidden});tip.addEventListener('click',()=>tip.hidden=true)})();
 </script>
 </body></html>
