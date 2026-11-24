@@ -322,10 +322,14 @@ function anpPrice(s,f){
 
 async function getPOIs(rt){
  const line=sample(rt,Math.max(2,rt.km/250)).map(p=>p[0].toFixed(4)+','+p[1].toFixed(4)).join(',');
- const q='[out:json][timeout:60];(nwr["amenity"="fuel"](around:1200,'+line+');nwr["amenity"="charging_station"](around:1500,'+line+');node["place"~"^(city|town|village)$"](around:8000,'+line+'););out center tags;';
+ const q='[out:json][timeout:50];(nwr["amenity"="fuel"](around:1200,'+line+');nwr["amenity"="charging_station"](around:1500,'+line+'););out center tags;';
+ const line2=sample(rt,Math.max(10,rt.km/40)).map(p=>p[0].toFixed(3)+','+p[1].toFixed(3)).join(',');
+ const q2='[out:json][timeout:40];node["place"~"^(city|town|village)$"](around:6000,'+line2+');out;';
+ const pq=overpass(q2).catch(()=>({elements:[]}));
  const j=await overpass(q);
+ const j2=await Promise.race([pq,sleep(20000).then(()=>({elements:[]}))]);
  const fine=sample(rt,0.5);
- const places=j.elements.filter(el=>el.tags&&el.tags.place&&el.tags.name&&el.lat!=null).map(el=>({n:el.tags.name,lat:el.lat,lon:el.lon,w:el.tags.place==='city'?1.6:el.tags.place==='town'?1.25:1}));
+ const places=j2.elements.filter(el=>el.tags&&el.tags.place&&el.tags.name&&el.lat!=null).map(el=>({n:el.tags.name,lat:el.lat,lon:el.lon,w:el.tags.place==='city'?1.6:el.tags.place==='town'?1.25:1}));
  const pois=j.elements.map(el=>{const t=el.tags||{};if(!t.amenity)return null;
   const lat=el.lat??el.center?.lat,lon=el.lon??el.center?.lon;if(lat==null)return null;
   let best=1e9,km=0;for(const p of fine){const d=hav(lat,lon,p[0],p[1]);if(d<best){best=d;km=p[2]}}
