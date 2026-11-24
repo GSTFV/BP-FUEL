@@ -171,12 +171,21 @@ async function getRoutes(a,b){
   return{pts,cum,km:x.distance/1000,min:x.duration/60}});
 }
 function sample(rt,step){const out=[];let next=0;rt.pts.forEach((p,i)=>{if(rt.cum[i]>=next){out.push([p[0],p[1],rt.cum[i]]);next=rt.cum[i]+step}});const l=rt.pts.length-1;out.push([rt.pts[l][0],rt.pts[l][1],rt.cum[l]]);return out}
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+async function overpass(q){
+ const ck='bpfuel_poi_'+[...q].reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0);
+ try{const c=JSON.parse(localStorage.getItem(ck)||'null');if(c&&Date.now()-c.t<7*864e5)return c.j}catch(e){}
+ const ctrls=OVERPASS.map(()=>new AbortController());
+ const one=async(u,i)=>{await new Promise(r=>setTimeout(r,i*3000));const t=setTimeout(()=>ctrls[i].abort(),90000);try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctrls[i].signal});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!j.elements||/runtime error/i.test(j.remark||''))throw new Error('resposta incompleta');return j}finally{clearTimeout(t)}};
+ let j;try{j=await Promise.any(OVERPASS.map(one))}catch(e){throw new Error('busca de postos fora do ar, tente de novo em alguns minutos')}
+ ctrls.forEach(c=>{try{c.abort()}catch(e){}});
+ try{localStorage.setItem(ck,JSON.stringify({t:Date.now(),j}))}catch(e){}
+ return j;
+}
 async function getPOIs(rt){
  const line=sample(rt,Math.max(2,rt.km/250)).map(p=>p[0].toFixed(4)+','+p[1].toFixed(4)).join(',');
  const q=`[out:json][timeout:50];(nwr["amenity"="fuel"](around:1200,${line});nwr["amenity"="charging_station"](around:1500,${line}););out center tags;`;
- const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
- if(!r.ok)throw new Error('busca de postos fora do ar');
- const j=await r.json();
+ const j=await overpass(q);
  const fine=sample(rt,0.5);
  const pois=j.elements.map(el=>{const lat=el.lat??el.center?.lat,lon=el.lon??el.center?.lon;if(lat==null)return null;
   let best=1e9,km=0;for(const p of fine){const d=hav(lat,lon,p[0],p[1]);if(d<best){best=d;km=p[2]}}
@@ -318,7 +327,7 @@ $('#trip').addEventListener('submit',async e=>{
  try{
   stt.textContent='Achando as cidades…';[A,B]=await Promise.all([geocode(o),geocode(d)]);
   stt.textContent='Traçando a rota…';routes=await getRoutes(A,B);sel=0;
-  stt.textContent='Procurando os postos no caminho…';stations=[];chargers=[];render();
+  stt.textContent='Procurando os postos no caminho… (pode levar até 1 minuto)';stations=[];chargers=[];render();
   try{const p=await getPOIs(routes[0]);stations=p.st;chargers=p.ch;stt.textContent=`${num(routes[0].km)} km · ${stations.length} postos e ${chargers.length} eletropostos perto da rota.`}
   catch(err){stt.textContent='Rota pronta, mas a busca de postos falhou ('+err.message+'). Tente de novo em instantes.'}
   render();
