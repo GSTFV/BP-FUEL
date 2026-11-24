@@ -447,7 +447,7 @@ let cur$=0,raf=0;
 function countTo(el,v){cancelAnimationFrame(raf);const from=cur$,t0=performance.now(),dur=matchMedia('(prefers-reduced-motion: reduce)').matches?0:750;
  const step=now=>{const k=dur?Math.min(1,(now-t0)/dur):1,e=1-Math.pow(1-k,3),x=from+(v-from)*e;el.textContent=brl(x);if(k<1)raf=requestAnimationFrame(step);else cur$=v};raf=requestAnimationFrame(step)}
 function busy(on){$('#status').classList.toggle('loading',on);$('#prog').classList.toggle('on',on)}
-const fmtT=m=>{const h=Math.floor(m/60),mm=Math.round(m%60);return h?`${h}h${String(mm).padStart(2,'0')}`:`${mm} min`};
+const fmtT=m=>{const tm=Math.round(m),h=Math.floor(tm/60),mm=tm%60;return h?`${h}h${String(mm).padStart(2,'0')}`:`${mm} min`};
 
 let drawnKey='';
 function drawMap(){
