@@ -772,7 +772,9 @@ function pick(i){const x=items[i];if(!x)return;const el=cur;el.value=x.n+', '+x.
 for(const id of['orig','dest']){
  const el=document.getElementById(id);if(!el)continue;
  el.setAttribute('role','combobox');el.setAttribute('aria-autocomplete','list');el.setAttribute('aria-controls','ac-list');el.setAttribute('aria-expanded','false');el.setAttribute('autocomplete','off');
- el.addEventListener('focus',()=>{cur=el;load();setTimeout(()=>{try{el.select()}catch(e){}},0)});
+ el.addEventListener('focus',()=>{cur=el;load();el.dataset.jf='1';try{el.setSelectionRange(0,el.value.length)}catch(e){}});
+ el.addEventListener('mouseup',e=>{if(el.dataset.jf){e.preventDefault();delete el.dataset.jf}});
+ el.addEventListener('keydown',()=>{delete el.dataset.jf});
  el.addEventListener('input',async()=>{el.dataset.touched='1';cur=el;await load();if(cur!==el||document.activeElement!==el)return;const q=el.value;show(search(q),norm(q.split(',')[0]),q)});
  el.addEventListener('keydown',e=>{
   if(box.hidden||!items.length){if(e.key==='Escape')hide();return}
@@ -800,8 +802,8 @@ window.bpHere=async(p,stt)=>{
 if(navigator.geolocation){
  const st=document.getElementById('status');
  const go=()=>navigator.geolocation.getCurrentPosition(p=>{if(document.getElementById('orig').dataset.touched)return;window.bpHere(p,st)},()=>{},{timeout:10000,maximumAge:600000});
- let asked=false;try{asked=!!localStorage.getItem('bp_geo_asked')}catch(e){}
- const ask=()=>{if(asked)return;try{localStorage.setItem('bp_geo_asked','1')}catch(e){}go()};
+ let asked=false;try{asked=!!sessionStorage.getItem('bp_geo_asked')}catch(e){}
+ const ask=()=>{if(asked)return;try{sessionStorage.setItem('bp_geo_asked','1')}catch(e){}go()};
  if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:'geolocation'}).then(s=>{if(s.state==='granted')go();else if(s.state==='prompt')ask()}).catch(ask);else ask();
 }
 })();
