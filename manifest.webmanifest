@@ -1,0 +1,23 @@
+{
+  "name": "BP FUEL",
+  "short_name": "BP FUEL",
+  "description": "Qual combustível compensa, onde parar e quanto colocar na sua viagem.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#061a33",
+  "theme_color": "#061a33",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
