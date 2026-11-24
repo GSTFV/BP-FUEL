@@ -162,6 +162,7 @@ footer{color:#6f8299;font-size:12.5px;padding:26px 0 40px;text-align:center}
 .trip{grid-template-columns:1fr}.go{width:100%}.verdict{grid-template-columns:1fr}.total{text-align:left}
 .stop{grid-template-columns:60px minmax(0,1fr)}.buy{grid-column:2;text-align:left;white-space:normal;margin-top:6px}.buy b{font-size:21px}.edit .row{grid-template-columns:1fr 1fr}.edit .row .save{grid-column:1/-1}.card{padding:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.bp-dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.6)}
 </style></head><body>
 <div class="bar"><div class="wrap"><img src="logo.png" alt="" width="31" height="38"><b><span>BP</span> FUEL</b><span class="live"><i></i>Rotas e postos ao vivo</span></div></div>
 <main class="wrap">
@@ -257,7 +258,7 @@ const hav=(a,b,c,d)=>{const R=6371,t=Math.PI/180,x=Math.sin((c-a)*t/2)**2+Math.c
 
 // ---------- mapa ----------
 const map=L.map('map',{zoomControl:true}).setView([-7.1,-36.6],7);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'bp-dark-tiles',attribution:'© OpenStreetMap'}).addTo(map);
 const layer=L.layerGroup().addTo(map);
 
 // ---------- dados da viagem ----------
