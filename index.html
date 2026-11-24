@@ -177,11 +177,22 @@ footer{color:#6f8299;font-size:12.5px;padding:26px 0 40px;text-align:center}
 <main class="wrap">
 <section class="hero">
 <div class="halo"><img src="logo.png" alt="BP FUEL" width="100" height="124"></div>
-<div><h1>Combustível certo, <span>no posto certo.</span></h1><p>Escolha o carro, trace a viagem e veja se compensa etanol ou gasolina, onde parar e quanto colocar.</p></div>
+<div><h1>Combustível certo, <span>no posto certo.</span></h1><p>Trace a viagem, escolha o carro e veja se compensa etanol ou gasolina, onde parar e quanto colocar.</p></div>
 </section>
 
 <section class="card">
-<div class="step"><span class="n">1</span>Seu carro<small>Tabela FIPE</small></div>
+<div class="step"><span class="n">1</span>Sua viagem<small>OpenStreetMap</small></div>
+<form class="trip" id="trip">
+<label>Saindo de<span class="inrow"><input id="orig" autocomplete="off" placeholder="Cidade, UF" value="Catolé do Rocha, PB"><button class="gps" id="gps" type="button">Estou aqui</button></span></label>
+<label>Indo para<input id="dest" autocomplete="off" placeholder="Cidade, UF" value="João Pessoa, PB"></label>
+<button class="go" id="go" type="submit">Traçar rota</button>
+</form>
+<div id="status">Escolha a saída e o destino. Enquanto você escolhe o carro, o app já traça a rota e procura os postos.</div>
+<div class="progress" id="prog"><i></i></div>
+</section>
+
+<section class="card">
+<div class="step"><span class="n">2</span>Seu carro<small>Tabela FIPE</small></div>
 <div class="carsel">
 <label>Marca<select id="brand"><option value="">Carregando…</option></select></label>
 <label>Ano<select id="year" disabled><option value="">Escolha a marca</option></select></label>
@@ -198,16 +209,7 @@ footer{color:#6f8299;font-size:12.5px;padding:26px 0 40px;text-align:center}
 </div>
 </section>
 
-<section class="card">
-<div class="step"><span class="n">2</span>Sua viagem<small>OpenStreetMap</small></div>
-<form class="trip" id="trip">
-<label>Saindo de<span class="inrow"><input id="orig" autocomplete="off" placeholder="Cidade, UF" value="Catolé do Rocha, PB"><button class="gps" id="gps" type="button">Estou aqui</button></span></label>
-<label>Indo para<input id="dest" autocomplete="off" placeholder="Cidade, UF" value="João Pessoa, PB"></label>
-<button class="go" id="go" type="submit">Traçar rota</button>
-</form>
-<div id="status">Escolha o carro, digite a saída e o destino e toque em Traçar rota.</div>
-<div class="progress" id="prog"><i></i></div>
-</section>
+
 
 <section class="card mapcard"><div id="map" role="region" aria-label="Mapa da rota"></div></section>
 
@@ -274,6 +276,7 @@ const layer=L.layerGroup().addTo(map);
 let routes=[],sel=0,stations=[],chargers=[],A=null,B=null,plan=null,editing=null;
 
 async function geocode(q){
+ {const og=document.getElementById('orig');if(og&&og.dataset.lat&&q===og.dataset.label)return{lat:+og.dataset.lat,lon:+og.dataset.lon,name:og.dataset.name,uf:og.dataset.uf};}
  const m=q.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
  if(m)return{lat:+m[1],lon:+m[3],name:'Sua localização'};
  const u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q='+encodeURIComponent(q);
@@ -785,9 +788,16 @@ for(const id of['orig','dest']){
   else if(e.key==='Escape'){hide()}
  });
  el.addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement!==el)hide()},150));
+ el.addEventListener('change',()=>{if(valid(el.value))autoTrace()});
 }
 box.addEventListener('pointerdown',e=>{e.preventDefault();const it=e.target.closest('.ac-i');if(it)pick(+it.dataset.i)});
 addEventListener('resize',place);addEventListener('scroll',place,true);
+let lastKey='',pending=false;
+function keyNow(){const og=document.getElementById('orig'),o=og.value.trim(),d=document.getElementById('dest').value.trim();return norm(o)+(og.dataset.lat&&o===og.dataset.label?'@'+og.dataset.lat+','+og.dataset.lon:'')+'>'+norm(d)}const goBtn=document.getElementById('go'),tripF=document.getElementById('trip');
+function autoTrace(){const o=document.getElementById('orig').value.trim(),d=document.getElementById('dest').value.trim();if(!o||!d||!goBtn||!tripF)return;if(goBtn.disabled){pending=true;return}const k=keyNow();if(k===lastKey)return;lastKey=k;pending=false;tripF.requestSubmit(goBtn)}
+if(tripF)tripF.addEventListener('submit',()=>{lastKey=keyNow()},true);
+if(goBtn)new MutationObserver(()=>{if(!goBtn.disabled&&pending){pending=false;setTimeout(autoTrace,50)}}).observe(goBtn,{attributes:true,attributeFilter:['disabled']});
+const valid=v=>{const m=String(v).match(/^(.*),\s*([A-Za-z]{2})\s*$/);if(!m)return false;if(!DATA)return true;const k=norm(m[1]),u=m[2].toUpperCase();return DATA.c.some(x=>x.k===k&&x.u===u)};
 async function reverse(lat,lon){
  const j=await (await fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&accept-language=pt-BR&lat='+lat+'&lon='+lon)).json();
  const a=j.address||{};const n=a.city||a.town||a.village||a.municipality||'';const iso=a['ISO3166-2-lvl4']||'';const uf=iso.startsWith('BR-')?iso.slice(3):'';
@@ -796,7 +806,7 @@ async function reverse(lat,lon){
 window.bpHere=async(p,stt)=>{
  const o=document.getElementById('orig');const lat=p.coords.latitude,lon=p.coords.longitude;
  if(stt)stt.textContent='Achando sua cidade…';
- try{const r=await reverse(lat.toFixed(5),lon.toFixed(5));if(r){o.value=r.n+', '+r.uf;myUF=r.uf;try{localStorage.setItem('bp_uf',r.uf)}catch(e){}if(stt)stt.textContent='Saída: '+r.n+', '+r.uf+' (sua localização). Se quiser, troque.';return}}catch(e){}
+ try{const r=await reverse(lat.toFixed(5),lon.toFixed(5));if(r){o.value=r.n+', '+r.uf;Object.assign(o.dataset,{lat:lat.toFixed(6),lon:lon.toFixed(6),label:o.value,name:r.n,uf:r.uf});myUF=r.uf;try{localStorage.setItem('bp_uf',r.uf)}catch(e){}if(stt)stt.textContent='Saída: seu local exato pelo GPS, em '+r.n+', '+r.uf+'. Se quiser, troque.';autoTrace();return}}catch(e){}
  o.value=lat.toFixed(5)+', '+lon.toFixed(5);if(stt)stt.textContent='Localização pronta. Agora o destino.';
 };
 if(navigator.geolocation){
@@ -804,8 +814,9 @@ if(navigator.geolocation){
  const go=()=>navigator.geolocation.getCurrentPosition(p=>{if(document.getElementById('orig').dataset.touched)return;window.bpHere(p,st)},()=>{},{timeout:10000,maximumAge:600000});
  let asked=false;try{asked=!!sessionStorage.getItem('bp_geo_asked')}catch(e){}
  const ask=()=>{if(asked)return;try{sessionStorage.setItem('bp_geo_asked','1')}catch(e){}go()};
- if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:'geolocation'}).then(s=>{if(s.state==='granted')go();else if(s.state==='prompt')ask()}).catch(ask);else ask();
+ if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:'geolocation'}).then(s=>{if(s.state==='granted'){go();setTimeout(autoTrace,5000)}else{if(s.state==='prompt')ask();autoTrace()}}).catch(()=>{ask();autoTrace()});else{ask();autoTrace()}
 }
+if(!navigator.geolocation)autoTrace();
 })();
 </script>
 </body></html>
