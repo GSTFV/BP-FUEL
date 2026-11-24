@@ -1,129 +1,238 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#061a33">
+<meta name="theme-color" content="#040c18">
 <title>BP FUEL</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light dark;--bg:light-dark(#fff,#121418);--card:light-dark(#f3f4f6,#1c1f25);--ink:light-dark(#17191d,#eceef1);--mute:light-dark(#5b6068,#a3a9b2);--line:light-dark(#dcdfe4,#2e323a);--navy:#061a33;--lime:#b8f000;--cyan:#1ec8e8;--blue:light-dark(#1550e6,#4d8dff);--eta:light-dark(#3a8f00,#9be22d);--gas:light-dark(#b85f00,#f2a23a);--ev:light-dark(#1550e6,#4d8dff)}
+:root{color-scheme:dark;--bg:#040c18;--bg2:#071427;--ink:#eef4fb;--mute:#93a6bd;--line:rgba(255,255,255,.09);--glass:rgba(255,255,255,.045);--glass2:rgba(255,255,255,.08);--lime:#b8f000;--cyan:#1ec8e8;--blue:#2f6bff;--eta:#a6ee2a;--gas:#ffad3b;--ev:#5aa2ff;--grad:linear-gradient(110deg,#b8f000,#1ec8e8 55%,#2f6bff);--r:22px;--ease:cubic-bezier(.2,.8,.2,1)}
 *{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip}
-.band{padding:18px max(4vw,16px)}
-.wrap{max-width:1000px;margin:0 auto}
-h1,h2,.big{font-family:"Barlow Condensed",Barlow,sans-serif;line-height:1.05;margin:0;text-wrap:balance}
-header{background:var(--navy);color:#fff;position:relative}
-header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:linear-gradient(90deg,#b8f000,#1ec8e8,#1550e6)}
-.top{display:flex;align-items:center;gap:16px}
-.top img{height:96px;width:auto;flex:none}
-.top p{margin:0;font:600 18px Barlow;color:#cfe9f5;max-width:24ch}
-.brand{font:700 26px "Barlow Condensed"}
-.brand small{font:600 14px Barlow;opacity:.85;margin-left:8px}
-.trip{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;margin-top:12px;align-items:end}
-.trip label{display:grid;gap:4px;font-weight:600;font-size:14px}
-.inrow{display:flex;gap:6px}
-input,select{font:16px Barlow;min-height:44px;padding:8px 10px;border-radius:8px;border:2px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
-header input{border-color:transparent}
-button{font:600 16px Barlow;min-height:44px;border-radius:8px;cursor:pointer}
-.go{padding:0 20px;border:0;background:var(--lime);color:var(--navy);font:700 18px "Barlow Condensed";white-space:nowrap}
-.go:disabled{opacity:.6;cursor:wait}
-.gps{flex:none;padding:0 12px;border:0;background:rgba(30,200,232,.22);color:#fff;font-size:14px}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
-#status{margin-top:10px;font-size:15px;min-height:1.5em}
-#map{height:min(58vh,520px);background:var(--card)}
-.routes{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chips button,.routes button{padding:0 14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:22px}
-.chips button[aria-pressed=true],.routes button[aria-pressed=true]{background:var(--navy);color:var(--lime);border-color:var(--navy)}
-.lbl{font-weight:700;font-size:15px;margin:16px 0 8px}
-.verdict{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 24px;align-items:end;margin-top:18px}
-.big{font-size:clamp(38px,9vw,52px)}
-.big.e{color:var(--eta)}.big.g{color:var(--gas)}.big.ev{color:var(--ev)}
-.why{color:var(--mute);margin:6px 0 0;max-width:62ch}
-.total{text-align:right}.total b{display:block;font:700 clamp(30px,7vw,44px) "Barlow Condensed";white-space:nowrap}
-.total span{color:var(--mute);font-size:14px}
-.warn{background:light-dark(#eaf4ff,#0d2347);border-left:4px solid var(--blue);padding:10px 14px;border-radius:6px;margin-top:12px}
-h2{font-size:30px;margin:6px 0 12px}
-.stops{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.stop{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:4px 14px;align-items:center;background:var(--card);border-radius:12px;padding:14px}
-.km{font:700 22px "Barlow Condensed";text-align:center;border:2px solid var(--blue);color:var(--blue);border-radius:8px;padding:4px 0;white-space:nowrap}
-.km small{display:block;font:600 13px Barlow;color:var(--mute)}
-.stop h3{margin:0;font-size:18px}
-.stop p{margin:2px 0 0;color:var(--mute);font-size:15px}
-.buy{text-align:right;white-space:nowrap}
-.buy b{display:block;font:700 26px "Barlow Condensed"}
-.buy b.e{color:var(--eta)}.buy b.g{color:var(--gas)}.buy b.ev{color:var(--ev)}
-.buy span{font-size:15px;color:var(--mute)}
-.link{background:none;border:0;color:var(--blue);padding:0;min-height:32px;font-weight:700;text-decoration:underline}
-.edit{background:var(--card);border-radius:12px;padding:14px;margin-top:12px;display:grid;gap:10px}
-.edit .row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}
-.save{padding:0 18px;border:0;background:var(--navy);color:var(--lime)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-label.f{display:grid;gap:6px;font-weight:600;font-size:15px}
-.note{color:var(--mute);font-size:14px;margin-top:10px}
-.alt{background:var(--card)}
-.pin{color:#fff;font:700 13px Barlow;border-radius:6px;padding:3px 7px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-130%);display:inline-block}
-.pin.e{background:#3a8f00}.pin.g{background:#b85f00}.pin.ev{background:#1550e6}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.55 "Plus Jakarta Sans",system-ui,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
+body::before,body::after{content:"";position:fixed;z-index:-1;width:70vmax;height:70vmax;border-radius:50%;filter:blur(90px);opacity:.28;pointer-events:none}
+body::before{background:radial-gradient(circle,#7fd000,transparent 60%);top:-35vmax;left:-25vmax;animation:drift 18s ease-in-out infinite alternate}
+body::after{background:radial-gradient(circle,#1d4ed8,transparent 60%);bottom:-40vmax;right:-30vmax;animation:drift 22s ease-in-out infinite alternate-reverse}
+@keyframes drift{to{transform:translate(8vmax,6vmax) scale(1.1)}}
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(4vw,14px)}
+h1,h2,h3{margin:0;letter-spacing:-.02em}
+/* topo */
+.bar{position:sticky;top:0;z-index:1000;backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);background:rgba(4,12,24,.62);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:10px;height:58px}
+.bar img{height:38px;width:auto}
+.bar b{font-weight:800;font-size:17px;letter-spacing:.02em}.bar b span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bar .live{margin-left:auto;font-size:12px;color:var(--mute);display:flex;align-items:center;gap:6px}
+.bar .live i{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(184,240,0,.6);animation:ping 2s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 9px rgba(184,240,0,0)}100%{box-shadow:0 0 0 0 rgba(184,240,0,0)}}
+.hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;padding:26px 0 8px}
+.halo{position:relative;width:132px;height:132px;display:grid;place-items:center}
+.halo::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#b8f000,#1ec8e8,#2f6bff,#b8f000);filter:blur(22px);opacity:.55;animation:spin 8s linear infinite}
+.halo img{position:relative;height:124px;width:auto;animation:float 5s ease-in-out infinite;filter:drop-shadow(0 12px 24px rgba(0,0,0,.5))}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes float{50%{transform:translateY(-7px)}}
+.hero h1{font-size:clamp(28px,5.4vw,46px);line-height:1.06;font-weight:800;text-wrap:balance}
+.hero h1 span{background:var(--grad);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 6s linear infinite}
+@keyframes sheen{to{background-position:-200% 0}}
+.hero p{margin:8px 0 0;color:var(--mute);max-width:46ch}
+/* cartões */
+.card{position:relative;background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-top:16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 20px 50px -25px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);animation:rise .7s var(--ease) both}
+.card:nth-of-type(2){animation-delay:.08s}.card:nth-of-type(3){animation-delay:.16s}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.985)}}
+.step{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;margin:0 0 14px}
+.step .n{width:30px;height:30px;border-radius:10px;background:var(--grad);color:#04101f;display:grid;place-items:center;font-size:15px;flex:none;box-shadow:0 6px 18px -6px rgba(30,200,232,.8)}
+.step small{margin-left:auto;font-weight:500;font-size:13px;color:var(--mute)}
+label{font-weight:600;font-size:13px;color:var(--mute)}
+.carsel{display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(0,2fr);gap:12px}
+.carsel label,.manual label,.trip label{display:grid;gap:6px}
+input,select{font:500 16px "Plus Jakarta Sans",sans-serif;min-height:48px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);width:100%;transition:border-color .25s,box-shadow .25s,background .25s;appearance:none;-webkit-appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--mute) 50%),linear-gradient(135deg,var(--mute) 50%,transparent 50%);background-position:calc(100% - 20px) 21px,calc(100% - 15px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
+select option{background:#0b1a30;color:var(--ink)}
+input::placeholder{color:#5f7189}
+input:focus,select:focus{outline:none;border-color:rgba(184,240,0,.7);box-shadow:0 0 0 4px rgba(184,240,0,.14);background:rgba(255,255,255,.09)}
+select:disabled{opacity:.45}
+button{font:700 15px "Plus Jakarta Sans",sans-serif;min-height:44px;border-radius:14px;cursor:pointer;transition:transform .15s var(--ease),box-shadow .25s,background .25s,color .25s;-webkit-tap-highlight-color:transparent}
+button:active{transform:scale(.97)}
+button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.carsum{margin-top:14px;border-radius:18px;padding:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;background:linear-gradient(135deg,rgba(184,240,0,.10),rgba(30,200,232,.06) 50%,rgba(47,107,255,.10));border:1px solid rgba(184,240,0,.18)}
+.carsum .nm{grid-column:1/-1;font-weight:700;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.carsum .stat{background:rgba(4,12,24,.45);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.carsum .stat small{display:block;font-size:12px;color:var(--mute);font-weight:600}
+.carsum .stat b{font-size:22px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.carsum .stat b.e{color:var(--eta)}.carsum .stat b.g,.carsum .stat b.d{color:var(--gas)}.carsum .stat b.ev{color:var(--ev)}
+.carsum .src{grid-column:1/-1;font-size:12.5px;color:var(--mute)}
+.adj{margin-left:auto;background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink);padding:0 14px;min-height:38px;font-size:13px}
+.adj:hover{background:rgba(255,255,255,.12)}
+.manual{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px;animation:rise .45s var(--ease) both}
+.trip{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end}
+.inrow{display:flex;gap:8px}
+.gps{flex:none;padding:0 14px;border:1px solid var(--line);background:rgba(30,200,232,.12);color:var(--cyan);font-size:13px}
+.go{position:relative;overflow:hidden;padding:0 26px;min-height:48px;border:0;background:var(--grad);color:#04101f;font-size:16px;font-weight:800;white-space:nowrap;box-shadow:0 10px 30px -10px rgba(30,200,232,.8)}
+.go::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-120%);animation:shine 3.2s ease-in-out infinite}
+@keyframes shine{60%,100%{transform:translateX(120%)}}
+.go:hover{box-shadow:0 14px 36px -10px rgba(184,240,0,.8)}
+.go:disabled{cursor:wait;opacity:.85}
+#status{margin-top:12px;font-size:14px;color:var(--mute);min-height:1.5em;display:flex;align-items:center;gap:10px}
+#status.loading::before{content:"";flex:none;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.15);border-top-color:var(--lime);animation:spin .8s linear infinite}
+.progress{height:3px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:10px;opacity:0;transition:opacity .3s}
+.progress.on{opacity:1}
+.progress i{display:block;height:100%;width:40%;background:var(--grad);border-radius:3px;animation:slide 1.1s ease-in-out infinite}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+/* mapa */
+.mapcard{padding:0;overflow:hidden}
+.mapcard::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;pointer-events:none;z-index:500}
+#map{height:min(60vh,540px);background:#0a1628}
+.leaflet-container{font-family:"Plus Jakarta Sans",sans-serif;background:#0a1628}
+.leaflet-control-attribution{background:rgba(4,12,24,.7)!important;color:#7d8ea4!important}
+.leaflet-control-attribution a{color:#9fb3c8!important}
+.leaflet-bar a{background:rgba(10,22,40,.9)!important;color:#fff!important;border-color:var(--line)!important}
+.leaflet-tooltip{background:#0b1a30;color:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.leaflet-tooltip::before{display:none}
+.route-core{filter:drop-shadow(0 0 6px rgba(30,200,232,.9))}
+.route-draw{animation:draw 1.8s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pin{position:relative;display:inline-block;transform:translate(-50%,-140%);color:#04101f;font:800 12.5px "Plus Jakarta Sans";border-radius:10px;padding:4px 9px;white-space:nowrap;box-shadow:0 8px 18px rgba(0,0,0,.45);animation:drop .6s var(--ease) both}
+.pin::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;background:inherit;transform:translateX(-50%) rotate(45deg);border-radius:2px;z-index:-1}
+.pin.e{background:var(--eta)}.pin.g,.pin.d{background:var(--gas)}.pin.ev{background:var(--ev)}
+@keyframes drop{from{opacity:0;transform:translate(-50%,-260%)}}
+.pulse{width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid #fff;box-shadow:0 0 0 0 currentColor;animation:pulse 2s infinite}
+.pulse.a{background:var(--lime);color:rgba(184,240,0,.6)}.pulse.b{background:var(--blue);color:rgba(47,107,255,.6)}
+@keyframes pulse{70%{box-shadow:0 0 0 14px transparent}100%{box-shadow:0 0 0 0 transparent}}
 .leaflet-div-icon{background:none;border:0}
-footer{color:var(--mute);font-size:14px}
-@media(max-width:600px){.top img{height:76px}.top p{font-size:16px}.trip{grid-template-columns:1fr}.verdict{grid-template-columns:1fr}.total{text-align:left}.stop{grid-template-columns:58px minmax(0,1fr)}.buy{grid-column:2;text-align:left}.buy b{display:inline;margin-right:8px}.edit .row{grid-template-columns:1fr 1fr}.edit .row .save{grid-column:1/-1}}
+.routes{display:flex;gap:8px;flex-wrap:wrap}
+.routes:empty{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button,.routes button{padding:0 16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);border-radius:999px;font-weight:600}
+.chips button:hover,.routes button:hover{background:rgba(255,255,255,.1)}
+.chips button[aria-pressed=true],.routes button[aria-pressed=true]{background:var(--grad);color:#04101f;border-color:transparent;box-shadow:0 8px 22px -10px rgba(184,240,0,.9)}
+.lbl{font-weight:700;font-size:14px;color:var(--mute);margin:18px 0 10px}
+.lvl{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.lvl select{width:auto;min-height:44px}
+/* veredito */
+.verdict{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 28px;align-items:end;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.big{font-size:clamp(36px,8.5vw,58px);font-weight:800;line-height:1;letter-spacing:-.03em}
+.big.e{background:linear-gradient(100deg,#d6ff6a,#7fd000);-webkit-background-clip:text;background-clip:text;color:transparent}
+.big.g,.big.d{background:linear-gradient(100deg,#ffd27a,#ff8a1f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.big.ev{background:linear-gradient(100deg,#9cc8ff,#2f6bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pop{animation:popin .6s var(--ease) both}
+@keyframes popin{from{opacity:0;transform:translateY(10px);filter:blur(6px)}}
+.why{color:var(--mute);margin:10px 0 0;max-width:62ch}
+.total{text-align:right}
+.total span{color:var(--mute);font-size:13px;font-weight:600}
+.total b{display:block;font-size:clamp(30px,7vw,46px);font-weight:800;letter-spacing:-.03em;white-space:nowrap;font-variant-numeric:tabular-nums}
+#vSave{display:inline-block;margin-top:4px;color:var(--eta)!important}
+.warn{display:flex;gap:10px;background:rgba(47,107,255,.10);border:1px solid rgba(47,107,255,.35);padding:12px 14px;border-radius:14px;margin-top:12px;font-size:14px;animation:rise .45s var(--ease) both}
+.warn::before{content:"!";flex:none;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+/* paradas */
+h2{font-size:22px;font-weight:800;margin:0 0 16px}
+.stops{list-style:none;margin:0;padding:0 0 0 22px;display:grid;gap:12px;position:relative}
+.stops::before{content:"";position:absolute;left:6px;top:14px;bottom:14px;width:2px;border-radius:2px;background:var(--grad);opacity:.6}
+.stop{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:4px 16px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:18px;padding:16px;animation:rise .55s var(--ease) both;animation-delay:calc(var(--i,0)*90ms);transition:background .25s,transform .25s}
+.stop:hover{background:rgba(255,255,255,.07);transform:translateX(3px)}
+.stop::before{content:"";position:absolute;left:-22px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--bg);border:3px solid var(--cyan);box-shadow:0 0 12px rgba(30,200,232,.7)}
+.stop.end::before{border-color:var(--blue);background:var(--blue)}
+.km{text-align:center;border-radius:14px;padding:8px 0;background:rgba(4,12,24,.6);border:1px solid var(--line);font-size:22px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.km small{display:block;font-size:11px;font-weight:600;color:var(--mute);margin-top:-2px}
+.stop h3{font-size:16.5px;font-weight:700}
+.stop p{margin:3px 0 0;color:var(--mute);font-size:14px}
+.buy{text-align:right;white-space:nowrap}
+.buy b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.buy b.e{color:var(--eta)}.buy b.g,.buy b.d{color:var(--gas)}.buy b.ev{color:var(--ev)}
+.buy span{font-size:13.5px;color:var(--mute)}
+.link{background:none;border:0;color:var(--cyan);padding:0;min-height:32px;font-weight:700;font-size:13.5px}
+.link:hover{color:var(--lime)}
+.edit{background:rgba(30,200,232,.06);border:1px solid rgba(30,200,232,.25);border-radius:18px;padding:16px;margin-top:14px;display:grid;gap:12px;animation:rise .45s var(--ease) both}
+.edit .row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.save{padding:0 20px;min-height:48px;border:0;background:var(--grad);color:#04101f}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label.f{display:grid;gap:6px}
+.note{color:var(--mute);font-size:13.5px;margin:12px 0 0}
+details>summary{cursor:pointer;font-weight:800;font-size:19px;min-height:44px;display:flex;align-items:center;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:"";margin-left:auto;width:10px;height:10px;border-right:2px solid var(--mute);border-bottom:2px solid var(--mute);transform:rotate(45deg);transition:transform .3s var(--ease)}
+details[open]>summary::after{transform:rotate(-135deg)}
+details[open]>.grid{animation:rise .4s var(--ease) both}
+footer{color:#6f8299;font-size:12.5px;padding:26px 0 40px;text-align:center}
+@media(max-width:640px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center;padding-top:18px}.hero p{margin-inline:auto}.halo{width:112px;height:112px}.halo img{height:104px}
+.carsel{grid-template-columns:1fr 1fr}.carsel .wide{grid-column:1/-1}.carsum{padding:12px;gap:8px}.carsum .stat{padding:8px 10px}.carsum .stat b{font-size:18px}
+.trip{grid-template-columns:1fr}.go{width:100%}.verdict{grid-template-columns:1fr}.total{text-align:left}
+.stop{grid-template-columns:60px minmax(0,1fr)}.buy{grid-column:2;text-align:left;white-space:normal;margin-top:6px}.buy b{font-size:21px}.edit .row{grid-template-columns:1fr 1fr}.edit .row .save{grid-column:1/-1}.card{padding:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style></head><body>
-<header class="band"><div class="wrap">
-<div class="top"><img src="logo.png" alt="BP FUEL" width="80" height="96"><p>Combustível certo, no posto certo, na hora certa.</p></div>
+<div class="bar"><div class="wrap"><img src="logo.png" alt="" width="31" height="38"><b><span>BP</span> FUEL</b><span class="live"><i></i>Rotas e postos ao vivo</span></div></div>
+<main class="wrap">
+<section class="hero">
+<div class="halo"><img src="logo.png" alt="BP FUEL" width="100" height="124"></div>
+<div><h1>Combustível certo, <span>no posto certo.</span></h1><p>Escolha o carro, trace a viagem e veja se compensa etanol ou gasolina, onde parar e quanto colocar.</p></div>
+</section>
+
+<section class="card">
+<div class="step"><span class="n">1</span>Seu carro<small>Tabela FIPE</small></div>
+<div class="carsel">
+<label>Marca<select id="brand"><option value="">Carregando…</option></select></label>
+<label>Ano<select id="year" disabled><option value="">Escolha a marca</option></select></label>
+<label class="wide">Versão<select id="model" disabled><option value="">Escolha o ano</option></select></label>
+</div>
+<div class="carsum" id="carsum"></div>
+<div class="manual" id="manual" hidden>
+<label>Tipo de motor<select id="type"><option value="flex">Flex</option><option value="g">Só gasolina</option><option value="d">Diesel</option><option value="ev">Elétrico</option></select></label>
+<label id="lkg">Gasolina na estrada (km/l)<input id="kg" type="number" step="0.1" inputmode="decimal"></label>
+<label id="lke">Etanol na estrada (km/l)<input id="ke" type="number" step="0.1" inputmode="decimal"></label>
+<label id="ltank">Tanque (litros)<input id="tank" type="number" step="1" inputmode="numeric"></label>
+<label id="levr">Autonomia com bateria cheia (km)<input id="evr" type="number" step="10" inputmode="numeric"></label>
+<button class="adj" id="back" type="button" style="align-self:end;margin:0">Voltar ao consumo da ficha</button>
+</div>
+</section>
+
+<section class="card">
+<div class="step"><span class="n">2</span>Sua viagem<small>OpenStreetMap</small></div>
 <form class="trip" id="trip">
 <label>Saindo de<span class="inrow"><input id="orig" autocomplete="off" placeholder="Cidade, UF" value="Catolé do Rocha, PB"><button class="gps" id="gps" type="button">Estou aqui</button></span></label>
 <label>Indo para<input id="dest" autocomplete="off" placeholder="Cidade, UF" value="João Pessoa, PB"></label>
 <button class="go" id="go" type="submit">Traçar rota</button>
 </form>
-<div id="status">Digite a saída e o destino e toque em Traçar rota.</div>
-</div></header>
+<div id="status">Escolha o carro, digite a saída e o destino e toque em Traçar rota.</div>
+<div class="progress" id="prog"><i></i></div>
+</section>
 
-<div id="map" role="region" aria-label="Mapa da rota"></div>
+<section class="card mapcard"><div id="map" role="region" aria-label="Mapa da rota"></div></section>
 
-<main>
-<section class="band"><div class="wrap">
+<section class="card">
+<div class="step"><span class="n">3</span>Seu plano</div>
 <div class="routes" id="routes"></div>
 <p class="lbl" id="lvlLbl">Quanto tem no tanque agora?</p>
-<div class="chips" id="levels"></div>
+<div class="lvl"><div class="chips" id="levels"></div><label id="lcur" style="display:flex;gap:8px;align-items:center">de<select id="cur"><option value="g">gasolina</option><option value="e">etanol</option></select></label></div>
 <div class="verdict">
 <div><div class="big" id="vTitle">Trace uma rota</div><p class="why" id="vWhy">O BP FUEL mostra qual combustível compensa, onde parar e quanto colocar.</p></div>
 <div class="total"><span id="vTotLbl">Você paga nos postos</span><b id="vTotal">—</b><span id="vSave"></span></div>
 </div>
 <div id="vWarn"></div>
 <div id="edit"></div>
-</div></section>
+</section>
 
-<section class="band" style="padding-top:0"><div class="wrap">
+<section class="card">
 <h2 id="stopsTitle">Onde parar e quanto colocar</h2>
 <ol class="stops" id="stops"></ol>
-</div></section>
+</section>
 
-<section class="band alt"><div class="wrap">
-<h2>Seu carro</h2>
-<div class="grid">
-<label class="f">Tipo de motor<select id="type"><option value="flex">Flex</option><option value="g">Só gasolina</option><option value="ev">Elétrico</option></select></label>
-<label class="f">O que tem no tanque<select id="cur"><option value="g">Gasolina</option><option value="e">Etanol</option></select></label>
-<label class="f">Consumo na estrada, gasolina (km/l)<input id="kg" type="number" step="0.1" inputmode="decimal"></label>
-<label class="f">Consumo na estrada, etanol (km/l)<input id="ke" type="number" step="0.1" inputmode="decimal"></label>
-<label class="f">Tamanho do tanque (litros)<input id="tank" type="number" step="1" inputmode="numeric"></label>
-<label class="f">Elétrico: autonomia com bateria cheia (km)<input id="evr" type="number" step="10" inputmode="numeric"></label>
+<section class="card">
+<details><summary>Mais opções</summary>
+<div class="grid" style="margin-top:12px">
 <label class="f">Folga de segurança<select id="res"><option value="40">40 km</option><option value="60">60 km</option><option value="80">80 km</option><option value="100">100 km</option></select></label>
 <label class="f">Quanto quer gastar<select id="budget"><option value="0">Sem limite</option><option value="100">Até R$ 100</option><option value="150">Até R$ 150</option><option value="200">Até R$ 200</option><option value="300">Até R$ 300</option><option value="500">Até R$ 500</option><option value="800">Até R$ 800</option></select></label>
+<label class="f">Gasolina de referência (R$/l)<input id="refg" type="number" step="0.01" inputmode="decimal"></label>
+<label class="f">Etanol de referência (R$/l)<input id="refe" type="number" step="0.01" inputmode="decimal"></label>
+<label class="f">Diesel de referência (R$/l)<input id="refd" type="number" step="0.01" inputmode="decimal"></label>
 </div>
-<p class="note">Valores iniciais: Chevrolet S10 2.4 Flex 2014 manual, 9,5 km/l na gasolina e 7,3 km/l no etanol na estrada, tanque de 76 L.</p>
-<h2 style="margin-top:22px">Preço de referência</h2>
-<div class="grid">
-<label class="f">Gasolina (R$/l)<input id="refg" type="number" step="0.01" inputmode="decimal"></label>
-<label class="f">Etanol (R$/l)<input id="refe" type="number" step="0.01" inputmode="decimal"></label>
-</div>
-<p class="note">Usado nos postos sem preço informado. Toque num posto no mapa ou na lista para informar o preço da bomba: o plano refaz na hora e o preço fica salvo neste celular.</p>
-</div></section>
+<p class="note">O preço de referência vale nos postos sem preço informado. Toque num posto no mapa ou na lista para informar o preço da bomba: o plano refaz na hora e o preço fica salvo neste celular.</p>
+</details>
+</section>
 </main>
-<footer class="band"><div class="wrap">Mapa e postos: © colaboradores do OpenStreetMap. Rotas: OSRM. Preços de referência: Procon-JP, Procon-CG e ANP (nov./2026). Distâncias e preços são estimativas: confira na bomba.</div></footer>
+<footer class="wrap">Carros: Tabela FIPE · Mapa e postos: © OpenStreetMap, © CARTO · Rotas: OSRM · Preços de referência: Procon-JP, Procon-CG e ANP (nov./2026).<br>Consumo, distâncias e preços são estimativas: confira no manual e na bomba.</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
@@ -132,14 +241,14 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl=v=>'R$ '+v.toFixed(2).replace('.',',');
 const num=v=>String(Math.max(0,Math.round(v)));
-const FN={e:'etanol',g:'gasolina'};
+const FN={e:'etanol',g:'gasolina',d:'diesel'};
 // Preços de cidade conhecidos (média ou meio da faixa pesquisada)
 const SEEDS=[
  {n:'João Pessoa',lat:-7.115,lon:-34.863,r:20,g:6.30,e:4.55,src:'Procon-JP, 17/11/2026'},
  {n:'Campina Grande',lat:-7.230,lon:-35.881,r:15,g:6.37,e:4.68,src:'Procon-CG, 27/10/2026 (média)'},
  {n:'Patos',lat:-7.024,lon:-37.280,r:12,g:6.69,e:5.06,src:'ANP, média da cidade'}];
 const LEVELS=[['Reserva',.08],['1/4',.25],['1/2',.5],['3/4',.75],['Cheio',1]];
-const DEF={level:.25,cur:'g',type:'flex',kg:9.5,ke:7.3,tank:76,evr:350,res:60,budget:0,refg:6.80,refe:5.05,prices:{}};
+const DEF={level:.25,cur:'g',type:'flex',kg:9.5,ke:7.3,tank:76,evr:350,res:60,budget:0,refg:6.80,refe:5.05,refd:6.45,prices:{},manual:false,car:{label:'Chevrolet S10 LTZ 2.4 Flex 2014 (padrão)'},spec:null};
 let S=JSON.parse(JSON.stringify(DEF));
 try{Object.assign(S,JSON.parse(localStorage.getItem('bpfuel')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('bpfuel',JSON.stringify(S))}catch(e){}};
@@ -148,7 +257,7 @@ const hav=(a,b,c,d)=>{const R=6371,t=Math.PI/180,x=Math.sin((c-a)*t/2)**2+Math.c
 
 // ---------- mapa ----------
 const map=L.map('map',{zoomControl:true}).setView([-7.1,-36.6],7);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'}).addTo(map);
 const layer=L.layerGroup().addTo(map);
 
 // ---------- dados da viagem ----------
@@ -204,11 +313,12 @@ async function getPOIs(rt){
 // ---------- preços ----------
 function price(s,f){
  const u=S.prices[s.id];if(u&&u[f]>0)return{v:u[f],src:'Informado por você',user:true};
- for(const c of SEEDS)if(hav(s.lat,s.lon,c.lat,c.lon)<=c.r)return{v:c[f],src:c.n+': '+c.src};
- return{v:f==='g'?S.refg:S.refe,src:'Preço de referência',ref:true};
+ for(const c of SEEDS)if(c[f]&&hav(s.lat,s.lon,c.lat,c.lon)<=c.r)return{v:c[f],src:c.n+': '+c.src};
+ return{v:f==='g'?S.refg:f==='e'?S.refe:S.refd,src:'Preço de referência',ref:true};
 }
-const kpl=f=>f==='g'?S.kg:S.ke;
-function best(s){const pg=price(s,'g'),pe=price(s,'e'),g=pg.v/S.kg*(pg.ref?1.02:1),e=pe.v/S.ke*(pe.ref?1.02:1);if(S.type!=='flex')return{f:'g',ck:g};return e<g?{f:'e',ck:e}:{f:'g',ck:g}}
+const kpl=f=>f==='e'?S.ke:S.kg;
+const mono=()=>S.type==='d'?'d':'g';
+function best(s){const cost=f=>{const p=price(s,f);return p.v/kpl(f)*(p.ref?1.02:1)};if(S.type!=='flex'){const f=mono();return{f,ck:cost(f)}}const g=cost('g'),e=cost('e');return e<g?{f:'e',ck:e}:{f:'g',ck:g}}
 
 // ---------- plano de abastecimento ----------
 function candidates(D){
@@ -219,9 +329,9 @@ function candidates(D){
 }
 function planFuel(){
  const rt=routes[sel],D=rt.km,cs=candidates(D);
- const L={g:0,e:0};L[S.type==='flex'?S.cur:'g']=S.tank*S.level;
- const range=()=>L.g*S.kg+L.e*S.ke,free=()=>Math.max(0,S.tank-L.g-L.e);
- const burn=d=>{const T=range(),k=T>0?Math.max(0,1-d/T):0;L.g*=k;L.e*=k;return T-d};
+ const L={g:0,e:0,d:0};L[S.type==='flex'?S.cur:mono()]=S.tank*S.level;
+ const range=()=>L.g*kpl('g')+L.e*kpl('e')+L.d*kpl('d'),free=()=>Math.max(0,S.tank-L.g-L.e-L.d);
+ const burn=d=>{const T=range(),k=T>0?Math.max(0,1-d/T):0;L.g*=k;L.e*=k;L.d*=k;return T-d};
  const start=range();let pos=0,ok=true,spent=0;const out=[];
  for(let i=0;i<cs.length;i++){
   const{s,b}=cs[i];const left=burn(s.km-pos);if(left<0){ok=false;break}pos=s.km;
@@ -233,8 +343,8 @@ function planFuel(){
  }
  const end=ok?burn(D-pos):-1;if(end<0)ok=false;
  const first=stations.find(s=>s.km<15);
- const baseL=Math.max(0,D+S.res-start)/S.kg;
- return{out,spent,end:Math.max(0,end),ok,base:first?baseL*price(first,'g').v:0,start};
+ const bf=mono(),baseL=Math.max(0,D+S.res-start)/kpl(bf);
+ return{out,spent,end:Math.max(0,end),ok,base:first?baseL*price(first,bf).v:0,start};
 }
 function planEV(){
  const rt=routes[sel],D=rt.km,R=S.evr;let rng=R*S.level,pos=0,ok=true;const out=[];
@@ -249,8 +359,9 @@ function planEV(){
 
 // ---------- tela ----------
 function render(){
- for(const k of['type','cur','kg','ke','tank','evr','res','budget','refg','refe'])$('#'+k).value=S[k];
- $('#cur').disabled=S.type!=='flex';
+ for(const k of['type','cur','kg','ke','tank','evr','res','budget','refg','refe','refd'])$('#'+k).value=S[k];
+ $('#lcur').hidden=S.type!=='flex';
+ renderCar();
  const ev=S.type==='ev';
  $('#lvlLbl').textContent=ev?'Quanto tem de bateria agora?':'Quanto tem no tanque agora?';
  $('#levels').innerHTML=LEVELS.map(([t,v])=>`<button type="button" data-v="${v}" aria-pressed="${S.level===v}">${t}</button>`).join('');
@@ -265,72 +376,171 @@ function render(){
   $('#vTotLbl').textContent='Paradas para recarga';$('#vTotal').textContent=String(plan.out.length);$('#vSave').textContent='';
   if(!plan.ok)w+='<div class="warn">Com essa bateria não dá pra chegar: falta eletroposto no caminho ou a autonomia é curta.</div>';
   $('#stopsTitle').textContent='Onde recarregar';
-  stopsHTML=plan.out.map(o=>`<li class="stop"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de bateria${o.s.city?' · '+esc(o.s.city):''}.</p></div><div class="buy"><b class="ev">Recarregar</b></div></li>`).join('');
+  stopsHTML=plan.out.map((o,i)=>`<li class="stop" style="--i:${i}"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de bateria${o.s.city?' · '+esc(o.s.city):''}.</p></div><div class="buy"><b class="ev">Recarregar</b></div></li>`).join('');
  }else{
   if(!stations.length){plan={out:[],end:0,ok:true};t.className='big';t.textContent='Procurando postos…';$('#vWhy').textContent='Assim que os postos da rota chegarem, o plano aparece aqui.';$('#vTotal').textContent='—';$('#vSave').textContent='';$('#vWarn').innerHTML='';$('#stops').innerHTML='';renderEdit();drawMap();return}
   plan=planFuel();
-  const lit={e:0,g:0};plan.out.forEach(o=>lit[o.f]+=o.lit);const main=lit.e>=lit.g?'e':'g';
+  const lit={e:0,g:0,d:0};plan.out.forEach(o=>lit[o.f]+=o.lit);const main=S.type==='d'?'d':lit.e>=lit.g?'e':'g';
   const refOnly=plan.out.length&&plan.out.every(o=>o.p.ref);
   if(!plan.out.length){t.className='big';t.textContent='Nem precisa parar';$('#vWhy').textContent=`Com o que tem no tanque você chega com uns ${num(plan.end)} km de folga.`}
   else{t.className='big '+main;t.textContent='Use '+FN[main].toUpperCase();
    const top=plan.out.reduce((a,b)=>b.lit>a.lit?b:a);
    const ratio=price(top.s,'e').v/price(top.s,'g').v;
    $('#vWhy').textContent=(S.type==='flex'?`No seu carro o etanol compensa até ${num(S.ke/S.kg*100)}% do preço da gasolina; onde você mais abastece ele está a ${num(ratio*100)}%. `:'')+`Pare ${plan.out.length===1?'uma vez':plan.out.length+' vezes'} e chegue com uns ${num(plan.end)} km de folga.`}
-  $('#vTotLbl').textContent='Você paga nos postos';$('#vTotal').textContent=brl(plan.spent);
+  $('#vTotLbl').textContent='Você paga nos postos';countTo($('#vTotal'),plan.spent);
   const sv=plan.base-plan.spent;$('#vSave').textContent=sv>1?`${brl(sv)} a menos que encher só de gasolina na saída`:'';
   if(!plan.ok)w+='<div class="warn">Com esse tanque e essa folga o carro não alcança o próximo posto. Saia com mais combustível ou diminua a folga.</div>';
   if(refOnly)w+='<div class="warn">Ainda não há preço informado nos postos desta rota: o plano usa o preço de referência. Toque num posto para informar o preço da bomba.</div>';
   if(S.budget>0&&plan.spent>S.budget)w+=`<div class="warn">O plano passa ${brl(plan.spent-S.budget)} do que você quer gastar. Saia com mais combustível ou diminua a folga.</div>`;
   $('#stopsTitle').textContent='Onde parar e quanto colocar';
-  stopsHTML=plan.out.map(o=>`<li class="stop"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de autonomia; saindo, roda ~${num(o.leave)} km. ${esc(o.p.src)}.</p><button class="link" data-edit="${o.s.id}">Informar preço</button></div><div class="buy"><b class="${o.f}">${num(o.lit)} L de ${FN[o.f]}</b><span>${brl(o.p.v)}/l · ${brl(o.cost)}</span></div></li>`).join('');
+  stopsHTML=plan.out.map((o,i)=>`<li class="stop" style="--i:${i}"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de autonomia; saindo, roda ~${num(o.leave)} km. ${esc(o.p.src)}.</p><button class="link" data-edit="${o.s.id}">Informar preço</button></div><div class="buy"><b class="${o.f}">${num(o.lit)} L de ${FN[o.f]}</b><span>${brl(o.p.v)}/l · ${brl(o.cost)}</span></div></li>`).join('');
  }
  $('#vWarn').innerHTML=w;
- $('#stops').innerHTML=stopsHTML+`<li class="stop"><div class="km">${num(rt.km)}<small>km</small></div><div><h3>${esc(B.name)}: chegada</h3><p>Chega com ~${num(plan.end)} km de folga.</p></div><div class="buy"><span>${fmtT(rt.min)}</span></div></li>`;
- renderEdit();drawMap();
+ $('#stops').innerHTML=stopsHTML+`<li class="stop end" style="--i:${plan.out.length}"><div class="km">${num(rt.km)}<small>km</small></div><div><h3>${esc(B.name)}: chegada</h3><p>Chega com ~${num(plan.end)} km de folga.</p></div><div class="buy"><span>${fmtT(rt.min)}</span></div></li>`;
+ renderEdit();drawMap();popVerdict();
 }
+let lastV='';
+function popVerdict(){const t=$('#vTitle'),k=t.className+t.textContent;if(k===lastV)return;lastV=k;t.classList.remove('pop');void t.offsetWidth;t.classList.add('pop')}
+let cur$=0,raf=0;
+function countTo(el,v){cancelAnimationFrame(raf);const from=cur$,t0=performance.now(),dur=matchMedia('(prefers-reduced-motion: reduce)').matches?0:750;
+ const step=now=>{const k=dur?Math.min(1,(now-t0)/dur):1,e=1-Math.pow(1-k,3),x=from+(v-from)*e;el.textContent=brl(x);if(k<1)raf=requestAnimationFrame(step);else cur$=v};raf=requestAnimationFrame(step)}
+function busy(on){$('#status').classList.toggle('loading',on);$('#prog').classList.toggle('on',on)}
 const fmtT=m=>{const h=Math.floor(m/60),mm=Math.round(m%60);return h?`${h}h${String(mm).padStart(2,'0')}`:`${mm} min`};
 
 let drawnKey='';
 function drawMap(){
  layer.clearLayers();if(!routes.length)return;
- routes.forEach((r,i)=>{if(i!==sel)L.polyline(r.pts,{color:'#8a9099',weight:5,opacity:.7}).on('click',()=>{sel=i;render()}).addTo(layer)});
- const rt=routes[sel];
- L.polyline(rt.pts,{color:'#061a33',weight:10,opacity:.85}).addTo(layer);L.polyline(rt.pts,{color:'#1ec8e8',weight:5}).addTo(layer);
+ const rt=routes[sel],key=A.lat+','+B.lat+','+sel,fresh=key!==drawnKey;
+ if(fresh){map.fitBounds(L.latLngBounds(rt.pts),{padding:[30,30]});drawnKey=key}
+ routes.forEach((r,i)=>{if(i!==sel)L.polyline(r.pts,{color:'#4b5b70',weight:5,opacity:.8}).on('click',()=>{sel=i;render()}).addTo(layer)});
+ L.polyline(rt.pts,{color:'#1ec8e8',weight:16,opacity:.16}).addTo(layer);
+ const core=L.polyline(rt.pts,{color:'#1ec8e8',weight:5,className:'route-core'}).addTo(layer);
+ if(fresh&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const el=core.getElement&&core.getElement();
+  if(el&&el.getTotalLength){const len=el.getTotalLength();el.style.strokeDasharray=len;el.style.strokeDashoffset=len;el.classList.add('route-draw');
+   el.addEventListener('animationend',()=>{el.style.strokeDasharray='';el.style.strokeDashoffset='';el.classList.remove('route-draw')},{once:true})}}
  const ev=S.type==='ev',chosen=new Set((plan?.out||[]).map(o=>o.s.id));
+ const col={e:'#a6ee2a',g:'#ffad3b',d:'#ffad3b',ev:'#5aa2ff'};
  (ev?chargers:stations).forEach(s=>{if(chosen.has(s.id))return;
-  L.circleMarker([s.lat,s.lon],{radius:5,color:'#fff',weight:1.5,fillColor:ev?'#1550e6':'#061a33',fillOpacity:.9}).bindTooltip(s.name).on('click',()=>openEdit(s.id)).addTo(layer)});
+  L.circleMarker([s.lat,s.lon],{radius:4.5,color:'#04101f',weight:1.5,fillColor:ev?'#5aa2ff':'#8fa3bb',fillOpacity:.95}).bindTooltip(s.name).on('click',()=>openEdit(s.id)).addTo(layer)});
  (plan?.out||[]).forEach(o=>{const cls=ev?'ev':o.f,txt=ev?'Recarga':num(o.lit)+' L';
-  L.marker([o.s.lat,o.s.lon],{icon:L.divIcon({className:'',html:`<span class="pin ${cls}">${txt}</span>`,iconSize:[0,0]})}).on('click',()=>openEdit(o.s.id)).addTo(layer);
-  L.circleMarker([o.s.lat,o.s.lon],{radius:7,color:'#fff',weight:2,fillColor:ev?'#1550e6':(o.f==='e'?'#3a8f00':'#b85f00'),fillOpacity:1}).addTo(layer)});
- L.circleMarker(rt.pts[0],{radius:9,color:'#061a33',weight:3,fillColor:'#b8f000',fillOpacity:1}).bindTooltip('Saída: '+A.name).addTo(layer);
- L.circleMarker(rt.pts[rt.pts.length-1],{radius:9,color:'#1550e6',weight:3,fillColor:'#fff',fillOpacity:1}).bindTooltip('Chegada: '+B.name).addTo(layer);
- const key=A.lat+','+B.lat+','+sel;if(key!==drawnKey){map.fitBounds(L.latLngBounds(rt.pts),{padding:[24,24]});drawnKey=key}
+  L.circleMarker([o.s.lat,o.s.lon],{radius:8,color:'#04101f',weight:2.5,fillColor:col[cls],fillOpacity:1}).on('click',()=>openEdit(o.s.id)).addTo(layer);
+  L.marker([o.s.lat,o.s.lon],{icon:L.divIcon({className:'',html:`<span class="pin ${cls}">${txt}</span>`,iconSize:[0,0]})}).on('click',()=>openEdit(o.s.id)).addTo(layer)});
+ L.marker(rt.pts[0],{icon:L.divIcon({className:'',html:'<div class="pulse a"></div>',iconSize:[0,0]})}).bindTooltip('Saída: '+A.name).addTo(layer);
+ L.marker(rt.pts[rt.pts.length-1],{icon:L.divIcon({className:'',html:'<div class="pulse b"></div>',iconSize:[0,0]})}).bindTooltip('Chegada: '+B.name).addTo(layer);
 }
 
 function openEdit(id){if(S.type==='ev')return;editing=id;renderEdit();$('#edit').scrollIntoView({behavior:'smooth',block:'center'})}
 function renderEdit(){
  const s=stations.find(x=>x.id===editing),box=$('#edit');
  if(!s||S.type==='ev'){box.innerHTML='';return}
- const g=price(s,'g'),e=price(s,'e');
- box.innerHTML=`<div class="edit"><div><b>${esc(s.name)}</b> · km ${num(s.km)}${s.city?' · '+esc(s.city):''}<div class="note" style="margin:2px 0 0">Agora: gasolina ${brl(g.v)}, etanol ${brl(e.v)} (${esc(g.src)})</div></div>
- <div class="row"><label class="f">Gasolina (R$/l)<input id="eg" type="number" step="0.01" inputmode="decimal" value="${g.user?g.v.toFixed(2):''}" placeholder="${g.v.toFixed(2)}"></label>
- <label class="f">Etanol (R$/l)<input id="ee" type="number" step="0.01" inputmode="decimal" value="${e.user?e.v.toFixed(2):''}" placeholder="${e.v.toFixed(2)}"></label>
+ const fs=S.type==='flex'?['g','e']:[mono()];
+ const ps=fs.map(f=>[f,price(s,f)]);
+ box.innerHTML=`<div class="edit"><div><b>${esc(s.name)}</b> · km ${num(s.km)}${s.city?' · '+esc(s.city):''}<div class="note" style="margin:2px 0 0">Agora: ${ps.map(([f,p])=>FN[f]+' '+brl(p.v)).join(', ')} (${esc(ps[0][1].src)})</div></div>
+ <div class="row">${ps.map(([f,p])=>`<label class="f">${FN[f][0].toUpperCase()+FN[f].slice(1)} (R$/l)<input data-pf="${f}" type="number" step="0.01" inputmode="decimal" value="${p.user?p.v.toFixed(2):''}" placeholder="${p.v.toFixed(2)}"></label>`).join('')}
  <button class="save" id="esave" type="button">Salvar preço</button></div>
  <div><button class="link" id="eclose" type="button">Fechar</button>${S.prices[s.id]?' · <button class="link" id="eclear" type="button">Apagar preço informado</button>':''}</div></div>`;
 }
 $('#edit').addEventListener('click',e=>{
  const id=e.target.id;if(!editing)return;
- if(id==='esave'){const g=parseFloat($('#eg').value),v=parseFloat($('#ee').value);const p={};if(g>=3&&g<=12)p.g=g;if(v>=2&&v<=10)p.e=v;if(p.g||p.e){S.prices[editing]=Object.assign(S.prices[editing]||{},p);save()}editing=null;render()}
+ if(id==='esave'){const p={};document.querySelectorAll('[data-pf]').forEach(i=>{const v=parseFloat(i.value);if(v>=2&&v<=12)p[i.dataset.pf]=v});if(Object.keys(p).length){S.prices[editing]=Object.assign(S.prices[editing]||{},p);save()}editing=null;render()}
  if(id==='eclose'){editing=null;renderEdit()}
  if(id==='eclear'){delete S.prices[editing];save();render()}
 });
+
+
+// ---------- carro (Tabela FIPE) ----------
+const FIPE='https://parallelum.com.br/fipe/api/v1/carros';
+async function fipe(path){
+ const k='fipe:'+path;try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Date.now()-c.t<7*864e5)return c.d}catch(e){}
+ const r=await fetch(FIPE+path);if(!r.ok)throw new Error('FIPE '+r.status);const d=await r.json();
+ try{localStorage.setItem(k,JSON.stringify({t:Date.now(),d}))}catch(e){}return d;
+}
+// consumo de ficha técnica conhecido (estrada)
+const KNOWN=[{re:/s-?10/i,re2:/2[.,]4/,y0:2012,y1:2016,type:'flex',g:9.5,e:7.3,tank:76,src:'Ficha técnica da S10 2.4 Flex (consumo na estrada)'}];
+const r1=v=>Math.round(v*10)/10;
+function spec(name,code){
+ const y=parseInt(code),fc=String(code).split('-')[1],n=name;
+ for(const k of KNOWN)if(k.re.test(n)&&k.re2.test(n)&&y>=k.y0&&y<=k.y1)return{type:k.type,g:k.g,e:k.e,tank:k.tank,evr:S.evr,src:k.src,est:false};
+ const ev=/el[eé]tric|\bev\b|e-tron|\bbev\b/i.test(n)&&!/h[ií]br/i.test(n);
+ const diesel=fc==='3'||/diesel|\btdi\b|\bcrdi\b|\bdci\b|\bhdi\b|\btdci\b|\bd-?4d\b|\bcdi\b|dies\./i.test(n);
+ const flex=!diesel&&/flex|f\.?power|bi-?comb|e\.?torq|\bt\.?flex|tot\.?flex/i.test(n);
+ const m=n.match(/(\d)[.,](\d)/),d=m?+(m[1]+'.'+m[2]):1.6;
+ const small=/strada|saveiro|montana|oroch|courier|\bfiorino/i.test(n);
+ const big=!small&&/pick-?up|\bcd\b|\bcs\b|s-?10|hilux|ranger|amarok|frontier|l200|toro|sw4|trailblazer|pajero|rampage|maverick|suv|blazer|tiguan|compass|commander|4x4/i.test(n);
+ let g=d<=1.0?14.5:d<=1.4?13.5:d<=1.6?12.8:d<=1.8?12:d<=2.0?11.5:d<=2.5?10:d<=3.0?9:7.5;
+ if(/turbo|tsi|\btb\b|thp|tce|gtdi|t200|ecoboost/i.test(n)&&d<=1.6)g*=1.08;
+ if(big)g*=.9;else if(small)g*=.95;
+ if(/4x4|awd|4wd/i.test(n))g*=.95;
+ if(/aut\.|autom|\bat\b|cvt|dsg|tiptronic/i.test(n))g*=.97;
+ if(diesel)g=d>=2.5?10.5:12;
+ const tank=big||diesel?76:/sed[aã]n|\bsed\b/i.test(n)?55:d>=2.0?60:48;
+ const type=ev?'ev':diesel?'d':flex?'flex':'g';
+ return{type,g:r1(g),e:r1(g*.7),tank,evr:350,src:type==='ev'?'Autonomia estimada. Confira no manual e ajuste se precisar.':'Estimado pelo motor '+d.toFixed(1).replace('.',',')+(big?' e porte de picape/SUV':'')+'. Confira no manual e ajuste se precisar.',est:true};
+}
+function applySpec(sp){if(!sp)return;S.spec=sp;S.type=sp.type;S.kg=sp.g;S.ke=sp.e;S.tank=sp.tank;S.evr=sp.evr||S.evr;S.manual=false;if(S.type!=='flex')S.cur='g';save();render()}
+function renderCar(){
+ const t=S.type,kmL=v=>String(r1(v)).replace('.',',')+' km/l';
+ const st=(l,v,c='')=>`<div class="stat"><small>${l}</small><b class="${c}">${v}</b></div>`;
+ let vals=t==='flex'?st('Gasolina',kmL(S.kg),'g')+st('Etanol',kmL(S.ke),'e')+st('Tanque',num(S.tank)+' L'):t==='d'?st('Diesel',kmL(S.kg),'d')+st('Tanque',num(S.tank)+' L'):t==='g'?st('Gasolina',kmL(S.kg),'g')+st('Tanque',num(S.tank)+' L'):st('Autonomia',num(S.evr)+' km','ev');
+ const src=S.manual?'Consumo ajustado por você.':S.spec?S.spec.src:'Ficha técnica da S10 2.4 Flex (consumo na estrada).';
+ $('#carsum').innerHTML=`<div class="nm">${esc(S.car?.label||'Escolha seu carro')}<button class="adj" id="adjBtn" type="button" aria-expanded="${!$('#manual').hidden}">${$('#manual').hidden?'Ajustar consumo':'Fechar ajuste'}</button></div>${vals}<span class="src">${esc(src)}</span>`;
+ $('#lkg').firstChild.textContent=t==='d'?'Diesel na estrada (km/l)':'Gasolina na estrada (km/l)';
+ $('#lke').hidden=t!=='flex';$('#lkg').hidden=t==='ev';$('#ltank').hidden=t==='ev';$('#levr').hidden=t!=='ev';
+ $('#back').hidden=!S.manual||!S.spec;
+}
+const fill=(sel,list,ph)=>{sel.innerHTML=`<option value="">${ph}</option>`+list.map(o=>`<option value="${esc(o.codigo)}">${esc(o.nome)}</option>`).join('');sel.disabled=!list.length};
+// nomes de marca como o povo conhece
+const BRAND_FIX={'gm - chevrolet':'Chevrolet','vw - volkswagen':'Volkswagen','kia motors':'Kia','caoa chery':'Chery','caoa chery/chery':'Chery','chery':'Chery','land rover':'Land Rover','mercedes-benz':'Mercedes-Benz','citroen':'Citroën','citroën':'Citroën','gwm':'GWM','byd':'BYD','bmw':'BMW','jac':'JAC','ram':'RAM','mini':'Mini','lexus':'Lexus','troller':'Troller','ssangyong':'SsangYong','alfa romeo':'Alfa Romeo','aston martin':'Aston Martin','rolls-royce':'Rolls-Royce','amg':'AMG','jpx':'JPX','hafei':'Hafei','effa':'Effa','lifan':'Lifan','agrale':'Agrale','iveco':'Iveco','mclaren':'McLaren'};
+const POP=['Chevrolet','Volkswagen','Fiat','Ford','Toyota','Hyundai','Honda','Renault','Jeep','Nissan','BYD','Peugeot','Citroën','Mitsubishi','Kia','Chery'];
+const cap=w=>w.length<=3&&w===w.toUpperCase()?w:w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();
+function brandName(n){const k=n.trim().toLowerCase();if(BRAND_FIX[k])return BRAND_FIX[k];
+ const t=n.replace(/^(GM|VW)\s*-\s*/i,'').trim();return BRAND_FIX[t.toLowerCase()]||t.split(/(\s|-)/).map(w=>/\s|-/.test(w)?w:cap(w)).join('')}
+// versão FIPE em linguagem simples (o nome original continua sendo usado no cálculo)
+function prettyVer(n){return n.replace(/\bF\.?Power\b|\bFlexPower\b|\bTot\.?\s?Flex\b|\bT\.?\s?Flex\b|\bTotal\s?Flex\b|\bFlexFuel\b|\bFlexOne\b|\bFlexStart\b|\bBi-?Comb\.?\w*/gi,'Flex')
+ .replace(/\bMec\.?(?=\s|$)/gi,'Manual').replace(/\bAut\.?(?=\s|$)/gi,'Automático').replace(/\bDies\.?(?=\s|$)/gi,'Diesel')
+ .replace(/\bCD\b/g,'Cabine Dupla').replace(/\bCS\b/g,'Cabine Simples').replace(/\bCE\b/g,'Cabine Estendida').replace(/\s{2,}/g,' ').trim()}
+async function loadBrands(){
+ try{const raw=await fipe('/marcas');
+  const seen=new Map();raw.forEach(b=>{const n=brandName(b.nome);if(!seen.has(n))seen.set(n,b.codigo)});
+  const all=[...seen].map(([nome,codigo])=>({nome,codigo})).sort((a,c)=>a.nome.localeCompare(c.nome,'pt'));
+  const pop=POP.filter(p=>seen.has(p)).map(p=>({nome:p,codigo:seen.get(p)}));
+  const opt=o=>`<option value="${esc(o.codigo)}">${esc(o.nome)}</option>`;
+  $('#brand').innerHTML='<option value="">Escolha a marca</option>'+(pop.length?`<optgroup label="Mais procuradas">${pop.map(opt).join('')}</optgroup>`:'')+`<optgroup label="Todas as marcas (${all.length})">${all.map(opt).join('')}</optgroup>`;
+  $('#brand').disabled=false;
+  if(S.car?.b){$('#brand').value=S.car.b;if($('#brand').value)await loadYears(true)}}
+ catch(e){$('#brand').innerHTML='<option value="">Lista indisponível</option>';$('#manual').hidden=false;stt.textContent='A lista de carros (FIPE) não respondeu. Preencha o consumo em "Ajustar consumo".';renderCar()}
+}
+let yearCodes={};
+async function loadYears(restore){
+ const b=$('#brand').value;fill($('#year'),[],'Escolha a marca');fill($('#model'),[],'Escolha o ano');if(!b)return;
+ $('#year').innerHTML='<option value="">Carregando…</option>';
+ try{const j=await fipe('/marcas/'+b+'/modelos');yearCodes={};
+  for(const a of j.anos||[]){const c=String(a.codigo),y=c.startsWith('32000')?'0km':c.split('-')[0];(yearCodes[y]=yearCodes[y]||[]).push(c)}
+  const ys=Object.keys(yearCodes).sort((a,c)=>(c==='0km'?9999:+c)-(a==='0km'?9999:+a));
+  fill($('#year'),ys.map(y=>({codigo:y,nome:y==='0km'?'Zero km':y})),'Escolha o ano');
+  if(restore&&S.car?.y){$('#year').value=S.car.y;if($('#year').value)await loadModels(true)}}
+ catch(e){$('#year').innerHTML='<option value="">Erro, tente de novo</option>'}
+}
+async function loadModels(restore){
+ const b=$('#brand').value,y=$('#year').value;fill($('#model'),[],'Escolha o ano');if(!b||!y)return;
+ $('#model').innerHTML='<option value="">Carregando…</option>';
+ try{const lists=await Promise.all((yearCodes[y]||[]).map(c=>fipe('/marcas/'+b+'/anos/'+c).then(ms=>ms.map(m=>({code:c,id:m.codigo,raw:m.nome}))).catch(()=>[])));
+  const ms=lists.flat();if(!ms.length)throw new Error('vazio');
+  const groups=new Map();
+  for(const m of ms){const g=m.raw.split(/\s+/)[0].replace(/[-.]$/,'');const f=m.code.endsWith('-3')&&!/diesel|dies\./i.test(m.raw)?' Diesel':'';m.nome=prettyVer(m.raw)+f;(groups.get(g)||groups.set(g,[]).get(g)).push(m)}
+  const gs=[...groups].sort((a,c)=>a[0].localeCompare(c[0],'pt'));
+  $('#model').innerHTML='<option value="">Escolha a versão</option>'+gs.map(([g,list])=>`<optgroup label="${esc(cap(g))}">${list.sort((a,c)=>a.nome.localeCompare(c.nome,'pt')).map(m=>`<option value="${esc(m.code+'|'+m.id)}" data-raw="${esc(m.raw)}">${esc(m.nome)}</option>`).join('')}</optgroup>`).join('');
+  $('#model').disabled=false;
+  if(restore&&S.car?.m)$('#model').value=S.car.m}
+ catch(e){$('#model').innerHTML='<option value="">Erro, tente de novo</option>'}
+}
 
 // ---------- eventos ----------
 const stt=$('#status');
 $('#trip').addEventListener('submit',async e=>{
  e.preventDefault();const o=$('#orig').value.trim(),d=$('#dest').value.trim();
  if(!o||!d){stt.textContent='Preencha a saída e o destino.';return}
- const btn=$('#go');btn.disabled=true;
+ const btn=$('#go');btn.disabled=true;busy(true);
  try{
   stt.textContent='Achando as cidades…';[A,B]=await Promise.all([geocode(o),geocode(d)]);
   stt.textContent='Traçando a rota…';routes=await getRoutes(A,B);sel=0;
@@ -339,21 +549,30 @@ $('#trip').addEventListener('submit',async e=>{
   catch(err){stt.textContent='Rota pronta, mas a busca de postos falhou ('+err.message+'). Tente de novo em instantes.'}
   render();
  }catch(err){stt.textContent='Não deu certo: '+(err.message||'tente de novo')+'.'}
- finally{btn.disabled=false}
+ finally{btn.disabled=false;busy(false)}
 });
 $('#gps').addEventListener('click',()=>{
  if(!navigator.geolocation){stt.textContent='Este aparelho não informa a localização.';return}
  stt.textContent='Pegando sua localização…';
  navigator.geolocation.getCurrentPosition(p=>{$('#orig').value=p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5);stt.textContent='Localização pronta. Agora o destino.'},()=>{stt.textContent='Não consegui sua localização. Digite a cidade.'},{timeout:10000});
 });
-$('#routes').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;sel=+b.dataset.r;render();
+$('#routes').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;sel=+b.dataset.r;render();busy(true);
  stt.textContent='Procurando os postos desta rota…';
  try{const p=await getPOIs(routes[sel]);stations=p.st;chargers=p.ch;stt.textContent=`${num(routes[sel].km)} km · ${stations.length} postos e ${chargers.length} eletropostos perto da rota.`}catch(err){stt.textContent='A busca de postos falhou. Tente de novo.'}
- render()});
+ busy(false);render()});
 $('#levels').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.level=+b.dataset.v;save();render()});
 $('#stops').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(b)openEdit(b.dataset.edit)});
-for(const k of['type','cur','res','budget'])$('#'+k).addEventListener('change',e=>{S[k]=k==='type'||k==='cur'?e.target.value:+e.target.value;save();render()});
-for(const k of['kg','ke','tank','evr','refg','refe'])$('#'+k).addEventListener('change',e=>{const v=parseFloat(e.target.value);if(v>0){S[k]=v;save()}render()});
+for(const k of['type','cur','res','budget'])$('#'+k).addEventListener('change',e=>{S[k]=k==='type'||k==='cur'?e.target.value:+e.target.value;if(k==='type')S.manual=true;save();render()});
+for(const k of['kg','ke','tank','evr','refg','refe','refd'])$('#'+k).addEventListener('change',e=>{const v=parseFloat(e.target.value);if(v>0){S[k]=v;if(['kg','ke','tank','evr'].includes(k))S.manual=true;save()}render()});
+$('#brand').addEventListener('change',()=>loadYears(false));
+$('#year').addEventListener('change',()=>loadModels(false));
+$('#model').addEventListener('change',()=>{const o=$('#model').selectedOptions[0];if(!o||!o.value)return;
+ const bn=$('#brand').selectedOptions[0].text,yn=$('#year').selectedOptions[0].text,code=o.value.split('|')[0];
+ S.car={b:$('#brand').value,y:$('#year').value,m:o.value,label:`${bn} ${o.text} · ${yn}`};applySpec(spec(o.dataset.raw||o.text,code.startsWith('32000')?new Date().getFullYear()+'-'+code.split('-')[1]:code));
+ stt.textContent='Carro escolhido. Agora a viagem: saída e destino.'});
+$('#carsum').addEventListener('click',e=>{if(e.target.id!=='adjBtn')return;$('#manual').hidden=!$('#manual').hidden;renderCar()});
+$('#back').addEventListener('click',()=>applySpec(S.spec));
+loadBrands();
 render();
 }
 </script>

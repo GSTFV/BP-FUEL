@@ -4,8 +4,8 @@
   "description": "Qual combustível compensa, onde parar e quanto colocar na sua viagem.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#061a33",
-  "theme_color": "#061a33",
+  "background_color": "#040c18",
+  "theme_color": "#040c18",
   "lang": "pt-BR",
   "icons": [
     {
