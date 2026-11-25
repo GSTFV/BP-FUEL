@@ -181,6 +181,26 @@ footer{color:#6f8299;font-size:12.5px;padding:26px 0 40px;text-align:center}
 .fuelchips button[aria-pressed=true]{background:linear-gradient(90deg,#b6f23a,#22d3ee);color:#04101f;border-color:transparent}
 footer .author{margin-top:14px;padding-top:12px;border-top:1px solid rgba(143,163,187,.18);font-size:14px;color:#c9d6e6}
 footer .author b{font-weight:700;background:linear-gradient(90deg,#b6f23a,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.navl{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.navl a{font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;border:1px solid rgba(34,211,238,.35);color:#7fe3f3;text-decoration:none}
+.navl a:hover{background:rgba(34,211,238,.12)}
+.rtopt{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-weight:600;cursor:pointer}
+.rtopt input{width:20px;height:20px;accent-color:#b6f23a}
+.rtopt small{display:block;font-weight:400;color:#8fa3bb;font-size:12px}
+.share{margin:12px 0 4px;min-height:44px;padding:0 18px;border-radius:22px;border:0;background:#25d366;color:#04101f;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.garage{margin-top:12px;border:1px solid rgba(143,163,187,.22);border-radius:12px;padding:10px 14px}
+.garage summary{cursor:pointer;font-weight:700;min-height:28px;display:flex;align-items:center}
+.gbody .gl{margin:12px 0 6px;font-weight:700;font-size:14px}
+.gbody .gh,.gbody .gnone{color:#8fa3bb;font-size:13px;margin:4px 0}
+.gcars{display:flex;flex-wrap:wrap;gap:8px}
+.gcar{display:inline-flex;border:1px solid rgba(143,163,187,.35);border-radius:18px;overflow:hidden}
+.gcar button{background:transparent;border:0;color:#dfe8f3;font-family:inherit;font-size:13px;padding:8px 12px;cursor:pointer;min-height:36px}
+.gcar .gx{color:#8fa3bb;padding:8px 10px;border-left:1px solid rgba(143,163,187,.25)}
+.gbtn{margin-top:8px;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(182,242,58,.45);background:rgba(182,242,58,.1);color:#d9f99d;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.grow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end}
+.grow label{display:grid;gap:4px;font-size:13px;color:#8fa3bb}
+.greal{margin:12px 0 0;font-weight:600;color:#d9f99d;font-size:14px}
+.gwarn{color:#fca5a5;font-size:13px}
 .bp-dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.6)}
 </style></head><body>
 <div class="bar"><div class="wrap"><img src="logo.png" alt="" width="31" height="38"><b><span>BP</span> FUEL</b><span class="live"><i></i>Rotas e postos ao vivo</span></div></div>
@@ -304,7 +324,7 @@ async function getRoutes(a,b){
   return{pts,cum,km:x.distance/1000,min:x.duration/60}});
 }
 function sample(rt,step){const out=[];let next=0;rt.pts.forEach((p,i)=>{if(rt.cum[i]>=next){out.push([p[0],p[1],rt.cum[i]]);next=rt.cum[i]+step}});const l=rt.pts.length-1;out.push([rt.pts[l][0],rt.pts[l][1],rt.cum[l]]);return out}
-const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+const OVERPASS=['https://overpass.openstreetmap.fr/api/interpreter','https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function overpass(q){
  const ck='bpfuel_poi_'+[...q].reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0);
@@ -360,6 +380,32 @@ function regiaoInfo(){const el=document.getElementById('regiao');if(!el)return;i
 let poiTok=0;
 function bgPOIs(rt){const tok=++poiTok;getPOIs(rt).then(p=>{if(tok!==poiTok||routes[sel]!==rt)return;if(p.st.length)stations=p.st;chargers=p.ch;$('#status').textContent=num(rt.km)+' km · '+p.st.length+' postos e '+p.ch.length+' eletropostos perto da rota.';render()}).catch(()=>{if(tok!==poiTok||routes[sel]!==rt)return;$('#status').textContent=num(rt.km)+' km · plano feito com a média de preços da região. Os postos exatos não carregaram agora.'})}
 
+
+let PP=null;const ppP=fetch('precos-postos.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{PP=j;try{if(routes.length)render()}catch(e){}}).catch(()=>{});
+const ppWeek=()=>{const a=PP.semana[0],b=PP.semana[1];return a.slice(8,10)+' a '+b.slice(8,10)+'/'+b.slice(5,7)};
+const POSTOS={};
+async function localPOIs(rt){
+ await cidP;if(!CID||!rt)return null;
+ const pts=sample(rt,2);let la0=90,la1=-90,lo0=180,lo1=-180;
+ for(const p of pts){la0=Math.min(la0,p[0]);la1=Math.max(la1,p[0]);lo0=Math.min(lo0,p[1]);lo1=Math.max(lo1,p[1])}
+ const ufs=new Set([A&&A.uf,B&&B.uf].filter(Boolean));
+ for(const c of CID){if(c.lat<la0-.4||c.lat>la1+.4||c.lon<lo0-.4||c.lon>lo1+.4||ufs.has(c.u))continue;for(let i=0;i<pts.length;i+=3){if(hav(c.lat,c.lon,pts[i][0],pts[i][1])<40){ufs.add(c.u);break}}}
+ const lists=await Promise.all([...ufs].map(u=>POSTOS[u]||(POSTOS[u]=fetch('postos/'+u+'.json?v=1').then(r=>r.ok?r.json():[]).catch(()=>{delete POSTOS[u];return[]}))));
+ const fine=sample(rt,0.5),m=.03,out=[];
+ for(const L of lists)for(const o of L){const lat=o[1],lon=o[2];if(lat<la0-m||lat>la1+m||lon<lo0-m||lon>lo1+m)continue;
+  const ev=!!o[6],lim=ev?1.5:1.2;let best=1e9,km=0;
+  for(const p of fine){if(Math.abs(p[0]-lat)>.03||Math.abs(p[1]-lon)>.03)continue;const d=hav(lat,lon,p[0],p[1]);if(d<best){best=d;km=p[2]}}
+  if(best>lim)continue;const town=o[5]||'';const base=o[3]||o[4]||(ev?'Eletroposto':'Posto');
+  out.push({id:o[0],lat,lon,km,off:best,ev,name:town&&!norm(base).includes(norm(town))?base+' · '+town:base,brand:o[4]||'',city:'',town})}
+ return{st:out.filter(p=>!p.ev).sort((a,b)=>a.km-b.km),ch:out.filter(p=>p.ev).sort((a,b)=>a.km-b.km)};
+}
+async function useLocal(rt){const loc=await localPOIs(rt).catch(()=>null);if(loc&&loc.st.length){stations=loc.st;chargers=loc.ch;$('#status').textContent=num(rt.km)+' km · '+loc.st.length+' postos e '+loc.ch.length+' eletropostos perto da rota.';return}stations=quickSt(rt);chargers=[];$('#status').textContent=num(rt.km)+' km · plano pronto com a média de preços da região. Buscando os postos exatos…';bgPOIs(rt)}
+const navL=s=>s.lat==null?'':'<span class="navl"><a href="https://waze.com/ul?ll='+s.lat+','+s.lon+'&navigate=yes" target="_blank" rel="noopener">Waze</a><a href="https://www.google.com/maps/dir/?api=1&destination='+s.lat+','+s.lon+'" target="_blank" rel="noopener">Google Maps</a></span>';
+const RT=()=>!!S.rt&&S.type!=='ev';
+function rtSt(){const rt=routes[sel];return stations.concat(stations.map(s=>Object.assign({},s,{id:s.id+'~v',km:2*rt.km-s.km,name:s.name+' (volta)'})))}
+window.bpSetRT=v=>{S.rt=!!v;save();if(routes.length)render()};window.bpGetRT=()=>!!S.rt;
+window.bpCar={get:()=>({car:S.car,type:S.type,kg:S.kg,ke:S.ke,tank:S.tank,evr:S.evr,spec:S.spec,manual:S.manual}),set:c=>{Object.assign(S,{car:c.car,type:c.type,kg:c.kg,ke:c.ke,tank:c.tank,evr:c.evr||S.evr,spec:c.spec||null,manual:!!c.manual});if(S.type!=='flex')S.cur='g';save();render()}};
+
 async function getPOIs(rt){
  const line=sample(rt,Math.max(2,rt.km/250)).map(p=>p[0].toFixed(4)+','+p[1].toFixed(4)).join(',');
  const q='[out:json][timeout:50];(nwr["amenity"="fuel"](around:1200,'+line+');nwr["amenity"="charging_station"](around:1500,'+line+'););out center tags;';
@@ -384,7 +430,8 @@ async function getPOIs(rt){
 
 // ---------- preços ----------
 function price(s,f){
- const u=S.prices[s.id];if(u&&u[f]>0)return{v:u[f],src:'Informado por você',user:true};
+ const sid=String(s.id).replace('~v','');const u=S.prices[sid];if(u&&u[f]>0)return{v:u[f],src:'Informado por você',user:true};
+ if(PP&&PP.p[sid]){const q=PP.p[sid][{g:0,e:1,d:2}[f]];if(q)return{v:q,src:'ANP neste posto'+(PP.p[sid][3]?' ('+PP.p[sid][3]+')':'')+', semana de '+ppWeek()}}
  const an=anpPrice(s,f);if(an)return an;
  for(const c of SEEDS)if(c[f]&&hav(s.lat,s.lon,c.lat,c.lon)<=c.r)return{v:c[f],src:c.n+': '+c.src};
  return{v:f==='g'?S.refg:f==='e'?S.refe:S.refd,src:'Preço de referência',ref:true};
@@ -397,11 +444,11 @@ function best(s){const cost=f=>{const p=price(s,f);return p.v/kpl(f)*(p.ref?1.02
 function candidates(D){
  // um candidato por trecho de 10 km: o mais barato
  const m=new Map();
- for(const s of stations){if(s.km>=D-1)continue;const k=Math.floor(s.km/10),b=best(s);const cur=m.get(k);if(!cur||b.ck<cur.b.ck-1e-9||(Math.abs(b.ck-cur.b.ck)<1e-9&&s.off<cur.s.off))m.set(k,{s,b})}
+ for(const s of (RT()?rtSt():stations)){if(s.km>=D-1)continue;const k=Math.floor(s.km/10),b=best(s);const cur=m.get(k);if(!cur||b.ck<cur.b.ck-1e-9||(Math.abs(b.ck-cur.b.ck)<1e-9&&s.off<cur.s.off))m.set(k,{s,b})}
  return[...m.values()].sort((a,b)=>a.s.km-b.s.km);
 }
 function planFuel(){
- const rt=routes[sel],D=rt.km,cs=candidates(D);
+ const rt=routes[sel],D=rt.km*(RT()?2:1),cs=candidates(D);
  const L={g:0,e:0,d:0};L[S.type==='flex'?S.cur:mono()]=S.tank*S.level;
  const range=()=>L.g*kpl('g')+L.e*kpl('e')+L.d*kpl('d'),free=()=>Math.max(0,S.tank-L.g-L.e-L.d);
  const burn=d=>{const T=range(),k=T>0?Math.max(0,1-d/T):0;L.g*=k;L.e*=k;L.d*=k;return T-d};
@@ -450,7 +497,7 @@ function render(){
   $('#vTotLbl').textContent='Paradas para recarga';$('#vTotal').textContent=String(plan.out.length);$('#vSave').textContent='';
   if(!plan.ok)w+='<div class="warn">Com essa bateria não dá pra chegar: falta eletroposto no caminho ou a autonomia é curta.</div>';
   $('#stopsTitle').textContent='Onde recarregar';
-  stopsHTML=plan.out.map((o,i)=>`<li class="stop" style="--i:${i}"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de bateria${o.s.city?' · '+esc(o.s.city):''}.</p></div><div class="buy"><b class="ev">Recarregar</b></div></li>`).join('');
+  stopsHTML=plan.out.map((o,i)=>`<li class="stop" style="--i:${i}"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3>${navL(o.s)}<p>Chega com ~${num(o.arrive)} km de bateria${o.s.city?' · '+esc(o.s.city):''}.</p></div><div class="buy"><b class="ev">Recarregar</b></div></li>`).join('');
  }else{
   if(!stations.length){plan={out:[],end:0,ok:true};t.className='big';t.textContent='Procurando postos…';$('#vWhy').textContent='Assim que os postos da rota chegarem, o plano aparece aqui.';$('#vTotal').textContent='—';$('#vSave').textContent='';$('#vWarn').innerHTML='';$('#stops').innerHTML='';renderEdit();drawMap();return}
   plan=planFuel();
@@ -467,10 +514,10 @@ function render(){
   if(refOnly)w+='<div class="warn">Ainda não há preço informado nos postos desta rota: o plano usa o preço de referência. Toque num posto para informar o preço da bomba.</div>';
   if(S.budget>0&&plan.spent>S.budget)w+=`<div class="warn">O plano passa ${brl(plan.spent-S.budget)} do que você quer gastar. Saia com mais combustível ou diminua a folga.</div>`;
   $('#stopsTitle').textContent='Onde parar e quanto colocar';
-  stopsHTML=plan.out.map((o,i)=>`<li class="stop" style="--i:${i}"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3><p>Chega com ~${num(o.arrive)} km de autonomia; saindo, roda ~${num(o.leave)} km. ${esc(o.p.src)}.</p><button class="link" data-edit="${o.s.id}">Informar preço</button></div><div class="buy"><b class="${o.f}">${num(o.lit)} L de ${FN[o.f]}</b><span>${brl(o.p.v)}/l · ${brl(o.cost)}</span></div></li>`).join('');
+  stopsHTML=plan.out.map((o,i)=>`<li class="stop" style="--i:${i}"><div class="km">${num(o.s.km)}<small>km</small></div><div><h3>${esc(o.s.name)}</h3>${navL(o.s)}<p>Chega com ~${num(o.arrive)} km de autonomia; saindo, roda ~${num(o.leave)} km. ${esc(o.p.src)}.</p><button class="link" data-edit="${o.s.id}">Informar preço</button></div><div class="buy"><b class="${o.f}">${num(o.lit)} L de ${FN[o.f]}</b><span>${brl(o.p.v)}/l · ${brl(o.cost)}</span></div></li>`).join('');
  }
  $('#vWarn').innerHTML=w;
- $('#stops').innerHTML=stopsHTML+`<li class="stop end" style="--i:${plan.out.length}"><div class="km">${num(rt.km)}<small>km</small></div><div><h3>${esc(B.name)}: chegada</h3><p>Chega com ~${num(plan.end)} km de folga.</p></div><div class="buy"><span>${fmtT(rt.min)}</span></div></li>`;
+ $('#stops').innerHTML=stopsHTML+`<li class="stop end" style="--i:${plan.out.length}"><div class="km">${num(rt.km*(RT()?2:1))}<small>km</small></div><div><h3>${esc(RT()?A.name+": volta completa":B.name+": chegada")}</h3><p>Chega com ~${num(plan.end)} km de folga.</p></div><div class="buy"><span>${fmtT(rt.min*(RT()?2:1))}</span></div></li>`;
  renderEdit();drawMap();popVerdict();
 }
 let lastV='';
@@ -503,7 +550,7 @@ function drawMap(){
  L.marker(rt.pts[rt.pts.length-1],{icon:L.divIcon({className:'',html:'<div class="pulse b"></div>',iconSize:[0,0]})}).bindTooltip('Chegada: '+B.name).addTo(layer);
 }
 
-function openEdit(id){if(S.type==='ev')return;editing=id;renderEdit();$('#edit').scrollIntoView({behavior:'smooth',block:'center'})}
+function openEdit(id){id=String(id).replace('~v','');if(S.type==='ev')return;editing=id;renderEdit();$('#edit').scrollIntoView({behavior:'smooth',block:'center'})}
 function renderEdit(){
  const s=stations.find(x=>x.id===editing),box=$('#edit');
  if(!s||S.type==='ev'){box.innerHTML='';return}
@@ -730,9 +777,7 @@ $('#trip').addEventListener('submit',async e=>{
   stt.textContent='Achando as cidades…';[A,B]=await Promise.all([geocode(o),geocode(d)]);
   stt.textContent='Traçando a rota…';routes=await getRoutes(A,B);sel=0;
   stt.textContent='Calculando o plano com a média de preços da região…';await Promise.all([cidP,anpP]).catch(()=>{});
-  stations=quickSt(routes[0]);chargers=[];regiaoInfo();
-  stt.textContent=num(routes[0].km)+' km · plano pronto com a média de preços da região. Buscando os postos exatos…';
-  bgPOIs(routes[0]);
+  regiaoInfo();await useLocal(routes[0]);
   render();
  }catch(err){stt.textContent='Não deu certo: '+(err.message||'tente de novo')+'.'}
  finally{btn.disabled=false;busy(false)}
@@ -743,9 +788,7 @@ $('#gps').addEventListener('click',()=>{
  navigator.geolocation.getCurrentPosition(p=>{window.bpHere(p,stt)},()=>{stt.textContent='Não consegui sua localização. Digite a cidade.'},{timeout:10000});
 });
 $('#routes').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;sel=+b.dataset.r;render();busy(true);
- await Promise.all([cidP,anpP]).catch(()=>{});stations=quickSt(routes[sel]);chargers=[];
- stt.textContent=num(routes[sel].km)+' km · plano pronto com a média de preços da região. Buscando os postos exatos…';
- bgPOIs(routes[sel]);
+ await Promise.all([cidP,anpP]).catch(()=>{});await useLocal(routes[sel]);
  busy(false);render()});
 $('#levels').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.level=+b.dataset.v;save();render()});
 $('#stops').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(b)openEdit(b.dataset.edit)});
@@ -826,6 +869,7 @@ for(const id of['orig','dest']){
 }
 box.addEventListener('pointerdown',e=>{e.preventDefault();const it=e.target.closest('.ac-i');if(it)pick(+it.dataset.i)});
 addEventListener('resize',place);addEventListener('scroll',place,true);
+{const q=new URLSearchParams(location.search);const de=q.get('de'),pa=q.get('para');if(de){const o=document.getElementById('orig');o.value=de;o.dataset.touched='1'}if(pa)document.getElementById('dest').value=pa;if(q.get('iv')==='1'&&window.bpSetRT)window.bpSetRT(true)}
 let lastKey='',pending=false;
 function keyNow(){const og=document.getElementById('orig'),o=og.value.trim(),d=document.getElementById('dest').value.trim();return norm(o)+(og.dataset.lat&&o===og.dataset.label?'@'+og.dataset.lat+','+og.dataset.lon:'')+'>'+norm(d)}const goBtn=document.getElementById('go'),tripF=document.getElementById('trip');
 function autoTrace(){const o=document.getElementById('orig').value.trim(),d=document.getElementById('dest').value.trim();if(!o||!d||!goBtn||!tripF)return;if(goBtn.disabled){pending=true;return}const k=keyNow();if(k===lastKey)return;lastKey=k;pending=false;tripF.requestSubmit(goBtn)}
@@ -857,5 +901,45 @@ if(!navigator.geolocation)autoTrace();
 (()=>{const sel=document.getElementById('type'),sum=document.getElementById('carsum');if(!sel||!sum)return;const w=document.createElement('div');w.className='fuelchips';w.setAttribute('role','group');w.setAttribute('aria-label','Combustível do carro');w.innerHTML='<span>Combustível:</span>'+[['flex','Flex'],['g','Gasolina'],['d','Diesel'],['ev','Elétrico']].map(a=>'<button type="button" data-v="'+a[0]+'">'+a[1]+'</button>').join('');sum.before(w);
 window.bpSyncChips=v=>w.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===v)));
 w.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;sel.value=b.dataset.v;sel.dispatchEvent(new Event('change',{bubbles:true}))});window.bpSyncChips(sel.value)})();
+</script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lv=$('#levels');
+if(lv&&window.bpGetRT){const w=document.createElement('label');w.className='rtopt';w.innerHTML='<input type="checkbox" id="rtck"><span>Ida e volta <small>planeja também a volta para a saída</small></span>';(lv.closest('.lvl')||lv).after(w);const ck=w.querySelector('input');ck.checked=window.bpGetRT();ck.addEventListener('change',()=>window.bpSetRT(ck.checked))}
+const vw=$('#vWarn');
+if(vw){const b=document.createElement('button');b.type='button';b.className='share';b.textContent='Compartilhar no WhatsApp';vw.after(b);
+ b.addEventListener('click',()=>{const o=$('#orig').value.trim(),d=$('#dest').value.trim();const rt=window.bpGetRT&&window.bpGetRT();
+  const L=['⛽ BP FUEL: '+o+' → '+d+(rt?' (ida e volta)':'')];const vt=($('#vTitle')||{}).textContent||'';const tot=(($('#vTotal')||{}).textContent||'').trim();
+  if(vt.trim())L.push(vt.trim()+(tot?' · você paga '+tot:''));
+  for(const li of document.querySelectorAll('#stops li.stop')){const k=li.querySelector('.km');const km=k&&k.firstChild?k.firstChild.textContent.trim():'';const h=(li.querySelector('h3')||{}).textContent||'';const buy=li.querySelector('.buy b');if(li.classList.contains('end'))L.push('🏁 '+h.trim()+' (km '+km+')');else L.push('📍 km '+km+' · '+h.trim()+(buy?' · '+buy.textContent.trim():''))}
+  const url=location.origin+location.pathname+'?de='+encodeURIComponent(o)+'&para='+encodeURIComponent(d)+(rt?'&iv=1':'');
+  L.push('','Veja no app: '+url);window.open('https://wa.me/?text='+encodeURIComponent(L.join('\n')),'_blank','noopener')})}
+const cs=$('#carsum');
+if(cs&&window.bpCar){
+ const K='bp_garagem';const load=()=>{try{return JSON.parse(localStorage.getItem(K))||{cars:[],logs:{}}}catch(e){return{cars:[],logs:{}}}};const store=g=>{try{localStorage.setItem(K,JSON.stringify(g))}catch(e){}};
+ const lab=()=>{const c=window.bpCar.get();return(c.car&&c.car.label)||'Meu carro'};
+ const det=document.createElement('details');det.className='garage';det.innerHTML='<summary>Minha garagem e consumo real</summary><div class="gbody"></div>';cs.after(det);const gb=det.querySelector('.gbody');
+ const kmL=v=>String(Math.round(v*10)/10).replace('.',',')+' km/l';
+ const avg=(logs,f)=>{const l=logs.filter(x=>x.f===f).slice(-5);if(!l.length)return null;const km=l.reduce((a,x)=>a+x.km,0),lt=l.reduce((a,x)=>a+x.l,0);return lt>0?{v:km/lt,n:l.length}:null};
+ function draw(){const g=load();const me=lab();const logs=g.logs[me]||[];const c=window.bpCar.get();const fdef=c.type==='d'?'d':c.type==='flex'&&c.cur==='e'?'e':'g';
+  const ag=avg(logs,'g'),ae=avg(logs,'e'),ad=avg(logs,'d');const real=[ag&&'gasolina '+kmL(ag.v)+' ('+ag.n+')',ae&&'etanol '+kmL(ae.v)+' ('+ae.n+')',ad&&'diesel '+kmL(ad.v)+' ('+ad.n+')'].filter(Boolean);
+  gb.innerHTML='<p class="gl">Carros salvos</p><div class="gcars">'+(g.cars.length?g.cars.map((x,i)=>'<span class="gcar"><button type="button" data-use="'+i+'">'+esc(x.label)+'</button><button type="button" class="gx" data-del="'+i+'" aria-label="Remover '+esc(x.label)+'">×</button></span>').join(''):'<span class="gnone">Nenhum carro salvo ainda.</span>')+'</div>'+
+  '<button type="button" class="gbtn" data-save="1">Salvar o carro atual</button>'+
+  '<p class="gl">Registrar abastecimento de '+esc(me)+'</p><p class="gh">Encha o tanque. No próximo tanque cheio, anote os km rodados desde o anterior e quantos litros entraram.</p>'+
+  '<div class="grow"><label>Km rodados<input type="number" inputmode="decimal" id="gkm" min="1"></label><label>Litros<input type="number" inputmode="decimal" id="glt" min="1" step="0.01"></label><label>Combustível<select id="gf"><option value="g">Gasolina</option><option value="e">Etanol</option><option value="d">Diesel</option></select></label><button type="button" class="gbtn" data-log="1">Registrar</button></div>'+
+  (real.length?'<p class="greal">Seu consumo real (média dos últimos registros): '+real.join(' · ')+'</p><button type="button" class="gbtn" data-real="1">Usar meu consumo real no plano</button>':'<p class="gh">Com o primeiro registro, o app mostra o consumo real do seu carro.</p>');
+  gb.querySelector('#gf').value=fdef}
+ gb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const g=load();
+  if(b.dataset.save){const c=window.bpCar.get();const label=lab();const i=g.cars.findIndex(x=>x.label===label);const item={label,data:c};if(i>-1)g.cars[i]=item;else g.cars.push(item);store(g);draw()}
+  else if(b.dataset.use!=null){const x=g.cars[+b.dataset.use];if(x){window.bpCar.set(x.data);draw()}}
+  else if(b.dataset.del!=null){g.cars.splice(+b.dataset.del,1);store(g);draw()}
+  else if(b.dataset.log){const km=parseFloat(gb.querySelector('#gkm').value),l=parseFloat(gb.querySelector('#glt').value),f=gb.querySelector('#gf').value;if(!(km>0&&l>0)){gb.querySelector('#gkm').focus();return}if(km/l<2||km/l>40){alertish('Confira os números: deu '+kmL(km/l)+'.');return}const me=lab();(g.logs[me]=g.logs[me]||[]).push({d:Date.now(),f,km,l});store(g);draw()}
+  else if(b.dataset.real){const me=lab();const logs=g.logs[me]||[];const c=window.bpCar.get();const ag=avg(logs,'g'),ae=avg(logs,'e'),ad=avg(logs,'d');if(c.type==='d'){if(ad)c.kg=Math.round(ad.v*10)/10}else{if(ag)c.kg=Math.round(ag.v*10)/10;if(ae)c.ke=Math.round(ae.v*10)/10}c.manual=true;window.bpCar.set(c);draw()}});
+ function alertish(t){let n=gb.querySelector('.gwarn');if(!n){n=document.createElement('p');n.className='gwarn';gb.appendChild(n)}n.textContent=t}
+ det.addEventListener('toggle',()=>{if(det.open)draw()});
+}
+})();
 </script>
 </body></html>
