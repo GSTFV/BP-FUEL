@@ -814,7 +814,9 @@ $('#model').addEventListener('change',()=>{const o=$('#model').selectedOptions[0
  stt.textContent='Carro escolhido. Agora a viagem: saída e destino.'});
 $('#carsum').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const k=i.dataset.k,v=parseFloat(String(i.value).replace(',','.'));if(v>0&&v<(k==='evr'?2000:k==='tank'?300:60)){S[k]=v;S.manual=true;save()}i.blur();render()});
 $('#carsum').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input[data-k]')){e.preventDefault();e.target.blur()}});
-$('#carsum').addEventListener('focusin',e=>{if(e.target.matches('input[data-k]'))setTimeout(()=>{try{e.target.select()}catch(x){}},0)});
+$('#carsum').addEventListener('focusin',e=>{if(e.target.matches('input[data-k]')){e.target.dataset.jf='1';try{e.target.setSelectionRange(0,e.target.value.length)}catch(x){}}});
+$('#carsum').addEventListener('mouseup',e=>{const i=e.target;if(i.matches&&i.matches('input[data-k]')&&i.dataset.jf){e.preventDefault();delete i.dataset.jf}});
+$('#carsum').addEventListener('input',e=>{if(e.target.dataset)delete e.target.dataset.jf});
 $('#carsum').addEventListener('click',e=>{if(e.target.id!=='adjBtn')return;$('#manual').hidden=!$('#manual').hidden;renderCar()});
 $('#back').addEventListener('click',()=>applySpec(S.spec));
 loadBrands();
