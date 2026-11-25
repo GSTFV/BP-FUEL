@@ -185,7 +185,11 @@ footer .author b{font-weight:700;background:linear-gradient(90deg,#b6f23a,#22d3e
 .navl a{font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;border:1px solid rgba(34,211,238,.35);color:#7fe3f3;text-decoration:none}
 .navl a:hover{background:rgba(34,211,238,.12)}
 .rtopt{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-weight:600;cursor:pointer}
-.rtopt input{width:20px;height:20px;accent-color:#b6f23a}
+.rtopt input{appearance:none;-webkit-appearance:none;flex:none;width:50px;height:28px;margin:0;border-radius:14px;background:rgba(143,163,187,.35);position:relative;cursor:pointer;transition:background .2s}
+.rtopt input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .2s}
+.rtopt input:checked{background:linear-gradient(90deg,#b6f23a,#22d3ee)}
+.rtopt input:checked::after{transform:translateX(22px)}
+.rtopt input:focus-visible{outline:3px solid #22d3ee;outline-offset:2px}
 .rtopt small{display:block;font-weight:400;color:#8fa3bb;font-size:12px}
 .share{margin:12px 0 4px;min-height:44px;padding:0 18px;border-radius:22px;border:0;background:#25d366;color:#04101f;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer}
 .garage{margin-top:12px;border:1px solid rgba(143,163,187,.22);border-radius:12px;padding:10px 14px}
@@ -201,6 +205,13 @@ footer .author b{font-weight:700;background:linear-gradient(90deg,#b6f23a,#22d3e
 .grow label{display:grid;gap:4px;font-size:13px;color:#8fa3bb}
 .greal{margin:12px 0 0;font-weight:600;color:#d9f99d;font-size:14px}
 .gwarn{color:#fca5a5;font-size:13px}
+.stat.ed{cursor:text}
+.stat.ed small i{font-style:normal;opacity:.6;font-size:11px}
+.edv{display:flex;align-items:baseline;gap:4px;font-size:22px;font-weight:800;color:#eef4fb}
+.edv.g{color:#ffad3b}.edv.e{color:#a6ee2a}
+.edv input{width:3.6em;min-width:0;min-height:0;padding:0 2px;margin:0;border:0;border-bottom:1px dashed rgba(143,163,187,.55);border-radius:0;background:transparent;color:inherit;font:inherit;font-weight:800}
+.edv input:focus{outline:none;border-bottom:2px solid #22d3ee;background:rgba(34,211,238,.08)}
+.edv em{font-style:normal;font-size:14px;font-weight:600;opacity:.8}
 .bp-dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.6)}
 </style></head><body>
 <div class="bar"><div class="wrap"><img src="logo.png" alt="" width="31" height="38"><b><span>BP</span> FUEL</b><span class="live"><i></i>Rotas e postos ao vivo</span></div></div>
@@ -232,10 +243,10 @@ footer .author b{font-weight:700;background:linear-gradient(90deg,#b6f23a,#22d3e
 <div class="carsum" id="carsum"></div>
 <div class="manual" id="manual" hidden>
 <label>Tipo de motor<select id="type"><option value="flex">Flex</option><option value="g">Só gasolina</option><option value="d">Diesel</option><option value="ev">Elétrico</option></select></label>
-<label id="lkg">Gasolina na estrada (km/l)<input id="kg" type="number" step="0.1" inputmode="decimal"></label>
-<label id="lke">Etanol na estrada (km/l)<input id="ke" type="number" step="0.1" inputmode="decimal"></label>
-<label id="ltank">Tanque (litros)<input id="tank" type="number" step="1" inputmode="numeric"></label>
-<label id="levr">Autonomia com bateria cheia (km)<input id="evr" type="number" step="10" inputmode="numeric"></label>
+<label id="lkg">Gasolina na estrada (km/l)<input id="kg" type="text" step="0.1" inputmode="decimal"></label>
+<label id="lke">Etanol na estrada (km/l)<input id="ke" type="text" step="0.1" inputmode="decimal"></label>
+<label id="ltank">Tanque (litros)<input id="tank" type="text" step="1" inputmode="numeric"></label>
+<label id="levr">Autonomia com bateria cheia (km)<input id="evr" type="text" step="10" inputmode="numeric"></label>
 <button class="adj" id="back" type="button" style="align-self:end;margin:0">Voltar ao consumo da ficha</button>
 </div>
 </section>
@@ -713,9 +724,10 @@ function applySpec(sp){if(!sp)return;S.spec=sp;S.type=sp.type;S.kg=sp.g;S.ke=sp.
 function renderCar(){
  const t=S.type,kmL=v=>String(r1(v)).replace('.',',')+' km/l';
  const st=(l,v,c='')=>`<div class="stat"><small>${l}</small><b class="${c}">${v}</b></div>`;
- let vals=t==='flex'?st('Gasolina',kmL(S.kg),'g')+st('Etanol',kmL(S.ke),'e')+st('Tanque',num(S.tank)+' L'):t==='d'?st('Diesel',kmL(S.kg),'d')+st('Tanque',num(S.tank)+' L'):t==='g'?st('Gasolina',kmL(S.kg),'g')+st('Tanque',num(S.tank)+' L'):st('Autonomia',num(S.evr)+' km','ev');
+ const stE=(l,k,v,u,c='')=>`<label class="stat ed"><small>${l} <i aria-hidden="true">✎</i></small><span class="edv ${c}"><input data-k="${k}" inputmode="decimal" autocomplete="off" value="${String(v).replace('.',',')}" aria-label="${l} em ${u}, toque para mudar"><em>${u}</em></span></label>`;
+ let vals=t==='flex'?stE('Gasolina','kg',r1(S.kg),'km/l','g')+stE('Etanol','ke',r1(S.ke),'km/l','e')+stE('Tanque','tank',Math.round(S.tank),'L'):t==='d'?stE('Diesel','kg',r1(S.kg),'km/l','d')+stE('Tanque','tank',Math.round(S.tank),'L'):t==='g'?stE('Gasolina','kg',r1(S.kg),'km/l','g')+stE('Tanque','tank',Math.round(S.tank),'L'):stE('Autonomia','evr',Math.round(S.evr),'km','ev');
  const src=S.manual?'Consumo ajustado por você.':S.spec?S.spec.src:'Ficha técnica da S10 2.4 Flex (consumo na estrada).';
- $('#carsum').innerHTML=`<div class="nm">${esc(S.car?.label||'Escolha seu carro')}<button class="adj" id="adjBtn" type="button" aria-expanded="${!$('#manual').hidden}">${$('#manual').hidden?'Ajustar consumo':'Fechar ajuste'}</button></div>${vals}<span class="src">${esc(src)}</span>`;
+ if(!($('#carsum').contains(document.activeElement)&&document.activeElement.tagName==='INPUT'))$('#carsum').innerHTML=`<div class="nm">${esc(S.car?.label||'Escolha seu carro')}<button class="adj" id="adjBtn" type="button" aria-expanded="${!$('#manual').hidden}">${$('#manual').hidden?'Ajustar consumo':'Fechar ajuste'}</button></div>${vals}<span class="src">${esc(src)}</span>`;
  $('#lkg').firstChild.textContent=t==='d'?'Diesel na estrada (km/l)':'Gasolina na estrada (km/l)';
  $('#lke').hidden=t!=='flex';$('#lkg').hidden=t==='ev';$('#ltank').hidden=t==='ev';$('#levr').hidden=t!=='ev';
  $('#back').hidden=!S.manual||!S.spec;
@@ -793,13 +805,16 @@ $('#routes').addEventListener('click',async e=>{const b=e.target.closest('button
 $('#levels').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.level=+b.dataset.v;save();render()});
 $('#stops').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(b)openEdit(b.dataset.edit)});
 for(const k of['type','cur','res','budget'])$('#'+k).addEventListener('change',e=>{S[k]=k==='type'||k==='cur'?e.target.value:+e.target.value;if(k==='type')S.manual=true;save();render()});
-for(const k of['kg','ke','tank','evr','refg','refe','refd'])$('#'+k).addEventListener('change',e=>{const v=parseFloat(e.target.value);if(v>0){S[k]=v;if(['kg','ke','tank','evr'].includes(k))S.manual=true;save()}render()});
+for(const k of['kg','ke','tank','evr','refg','refe','refd'])$('#'+k).addEventListener('change',e=>{const v=parseFloat(String(e.target.value).replace(',','.'));if(v>0){S[k]=v;if(['kg','ke','tank','evr'].includes(k))S.manual=true;save()}render()});
 $('#brand').addEventListener('change',()=>loadYears(false));
 $('#year').addEventListener('change',()=>loadModels(false));
 $('#model').addEventListener('change',()=>{const o=$('#model').selectedOptions[0];if(!o||!o.value)return;
  const bn=$('#brand').selectedOptions[0].text,yn=$('#year').selectedOptions[0].text,code=o.value.split('|')[0];
  S.car={b:$('#brand').value,y:$('#year').value,m:o.value,label:`${bn} ${o.text} · ${yn}`};applySpec(spec(o.dataset.raw||o.text,code.startsWith('32000')?new Date().getFullYear()+'-'+code.split('-')[1]:code));
  stt.textContent='Carro escolhido. Agora a viagem: saída e destino.'});
+$('#carsum').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const k=i.dataset.k,v=parseFloat(String(i.value).replace(',','.'));if(v>0&&v<(k==='evr'?2000:k==='tank'?300:60)){S[k]=v;S.manual=true;save()}i.blur();render()});
+$('#carsum').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input[data-k]')){e.preventDefault();e.target.blur()}});
+$('#carsum').addEventListener('focusin',e=>{if(e.target.matches('input[data-k]'))setTimeout(()=>{try{e.target.select()}catch(x){}},0)});
 $('#carsum').addEventListener('click',e=>{if(e.target.id!=='adjBtn')return;$('#manual').hidden=!$('#manual').hidden;renderCar()});
 $('#back').addEventListener('click',()=>applySpec(S.spec));
 loadBrands();
@@ -907,7 +922,7 @@ w.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;s
 const $=s=>document.querySelector(s);
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lv=$('#levels');
-if(lv&&window.bpGetRT){const w=document.createElement('label');w.className='rtopt';w.innerHTML='<input type="checkbox" id="rtck"><span>Ida e volta <small>planeja também a volta para a saída</small></span>';(lv.closest('.lvl')||lv).after(w);const ck=w.querySelector('input');ck.checked=window.bpGetRT();ck.addEventListener('change',()=>window.bpSetRT(ck.checked))}
+if(lv&&window.bpGetRT){const w=document.createElement('label');w.className='rtopt';w.innerHTML='<input type="checkbox" role="switch" id="rtck"><span>Ida e volta <small>planeja também a volta para a saída</small></span>';(lv.closest('.lvl')||lv).after(w);const ck=w.querySelector('input');ck.checked=window.bpGetRT();ck.addEventListener('change',()=>window.bpSetRT(ck.checked))}
 const vw=$('#vWarn');
 if(vw){const b=document.createElement('button');b.type='button';b.className='share';b.textContent='Compartilhar no WhatsApp';vw.after(b);
  b.addEventListener('click',()=>{const o=$('#orig').value.trim(),d=$('#dest').value.trim();const rt=window.bpGetRT&&window.bpGetRT();
